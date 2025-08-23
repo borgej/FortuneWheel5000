@@ -146,20 +146,28 @@ class SimpleCanvasWheel {
     ctx.restore();
   }
 
-  spinToIndex(targetIndex, durationMs = 5000, revolutions = 3) {
+  spinToIndex(targetIndex, durationMs = 5000, revolutions = 3, options = {}) {
     if (!this.items.length) return;
     if (typeof this.onSpin === 'function') { try { this.onSpin(); } catch {} }
     const slice = this.sliceAngle;
-    const desired = (2*Math.PI - (targetIndex + 0.5) * slice) % (2*Math.PI);
+    // Allow a slight random landing offset inside the target slice so it doesn't always center
+    const rand = Math.random();
+    const offsetFactor = (options.randomOffsetFactor ?? 0.6); // 0..1 fraction of half-slice
+    const maxOffset = (slice * 0.5) * Math.max(0, Math.min(1, offsetFactor));
+    const signedOffset = (rand * 2 - 1) * maxOffset; // [-maxOffset, +maxOffset]
+    const desired = (2*Math.PI - (targetIndex + 0.5) * slice - signedOffset) % (2*Math.PI);
     const start = this.rotation % (2*Math.PI);
     let delta = (desired - start);
     delta = (delta % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
     const end = start + (Math.PI * 2) * revolutions + delta;
     const t0 = performance.now();
+    // Easing options: default cubic; optional quintic for a longer drain-out feel
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+    const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+    const easing = options.smooth ? easeOutQuint : easeOutCubic;
     const step = (now) => {
       const dt = Math.min(1, (now - t0) / durationMs);
-      const eased = easeOutCubic(dt);
+      const eased = easing(dt);
       this.rotation = start + (end - start) * eased;
       this.draw();
       const idx = this.currentIndex();
@@ -295,6 +303,9 @@ class TwitchGiveawayApp {
     this.entryStartTime = 0;
     this.entryTotalSeconds = 0;
     this.excludedWinners = new Set();
+  // Spin behavior
+  this.spinDurationSeconds = 5;
+  this.spinSmoothEasing = true;
     this.audioCtx = null;
     this._lastTickStep = null;
     this._debugTimeouts = [];
@@ -334,6 +345,7 @@ class TwitchGiveawayApp {
       tickToggle: document.getElementById('tickToggle'),
       startGiveawayBtn: document.getElementById('startGiveawayBtn'),
       entryTimerMinutesInput: document.getElementById('entryTimerMinutes'),
+  spinDurationSecondsInput: document.getElementById('spinDurationSeconds'),
       entryInfo: document.getElementById('entryInfo'),
       entryOverlay: document.getElementById('entryOverlay'),
       hideSensitive: document.getElementById('hideSensitive'),
@@ -343,6 +355,7 @@ class TwitchGiveawayApp {
       confirmMessage: document.getElementById('confirmMessage'),
       confirmYes: document.getElementById('confirmYes'),
       confirmNo: document.getElementById('confirmNo'),
+  spinSmoothEasingToggle: document.getElementById('spinSmoothEasing'),
     };
 
     this.bindEvents();
@@ -472,6 +485,21 @@ class TwitchGiveawayApp {
         this.saveToStorage();
       }
     });
+    if (this.elements.spinDurationSecondsInput) {
+      this.elements.spinDurationSecondsInput.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        if (!isNaN(v) && v > 0) {
+          this.spinDurationSeconds = v;
+          this.saveToStorage();
+        }
+      });
+    }
+    if (this.elements.spinSmoothEasingToggle) {
+      this.elements.spinSmoothEasingToggle.addEventListener('change', (e) => {
+        this.spinSmoothEasing = !!e.target.checked;
+        this.saveToStorage();
+      });
+    }
   }
 
   restoreFromStorage() {
@@ -508,6 +536,14 @@ class TwitchGiveawayApp {
             this.entryTimerMinutes = Math.max(0, s.entryTimerMinutes|0);
             if (this.elements.entryTimerMinutesInput) this.elements.entryTimerMinutesInput.value = String(this.entryTimerMinutes);
           }
+          if (typeof s.spinDurationSeconds === 'number' && s.spinDurationSeconds > 0) {
+            this.spinDurationSeconds = s.spinDurationSeconds;
+          }
+          if (typeof s.spinSmoothEasing === 'boolean') {
+            this.spinSmoothEasing = s.spinSmoothEasing;
+          }
+          if (this.elements.spinDurationSecondsInput) this.elements.spinDurationSecondsInput.value = String(this.spinDurationSeconds);
+          if (this.elements.spinSmoothEasingToggle) this.elements.spinSmoothEasingToggle.checked = !!this.spinSmoothEasing;
           if (typeof s.enableConfetti === 'boolean') { this.enableConfetti = s.enableConfetti; if (this.elements.confettiToggle) this.elements.confettiToggle.checked = s.enableConfetti; }
           if (typeof s.enableSad === 'boolean') { this.enableSad = s.enableSad; if (this.elements.sadToggle) this.elements.sadToggle.checked = s.enableSad; }
           if (typeof s.enableTick === 'boolean') { this.enableTick = s.enableTick; if (this.elements.tickToggle) this.elements.tickToggle.checked = s.enableTick; }
@@ -529,6 +565,11 @@ class TwitchGiveawayApp {
             this.elements.channelInput.value = d.channelName;
             this.channelName = (d.channelName || '').trim().toLowerCase();
           }
+          if (typeof d.spinDurationSeconds === 'number' && d.spinDurationSeconds > 0) {
+            this.spinDurationSeconds = d.spinDurationSeconds;
+          }
+          if (this.elements.spinDurationSecondsInput) this.elements.spinDurationSecondsInput.value = String(this.spinDurationSeconds);
+          if (this.elements.spinSmoothEasingToggle) this.elements.spinSmoothEasingToggle.checked = !!this.spinSmoothEasing;
         }
       }
 
@@ -568,6 +609,8 @@ class TwitchGiveawayApp {
         keywordText: (this.elements.keywordInput?.value || '').trim(),
         winnerTimerMinutes: this.winnerTimerMinutes|0,
         entryTimerMinutes: this.entryTimerMinutes|0,
+  spinDurationSeconds: this.spinDurationSeconds,
+  spinSmoothEasing: !!this.spinSmoothEasing,
         enableConfetti: !!this.enableConfetti,
         enableSad: !!this.enableSad,
         enableTick: !!this.enableTick,
@@ -1118,10 +1161,17 @@ class TwitchGiveawayApp {
     if (this.excludedWinners && this.excludedWinners.size) names = names.filter(n => !this.excludedWinners.has(n));
     if (names.length === 0) { this.isSpinning = false; this.elements.spinBtn.disabled = false; this.elements.spinBtn.textContent = 'Spin the Wheel'; return; }
     if (this.elements.entryOverlay) this.elements.entryOverlay.style.display = 'none';
+    // Winner index is random each spin; no bias
     const winnerIndex = Math.floor(Math.random() * names.length);
     if (this.wheel && this.wheel.spinToIndex) {
       this._pendingWinnerIndex = winnerIndex;
-      this.wheel.spinToIndex(winnerIndex, 5000, 3);
+      // Read the latest value from the input to reflect user changes even if not yet persisted
+      let secs = parseFloat(this.elements.spinDurationSecondsInput?.value);
+      if (isNaN(secs) || secs <= 0) secs = this.spinDurationSeconds || 5;
+      // Clamp to sensible bounds
+      secs = Math.max(0.5, Math.min(60, secs));
+      const ms = Math.max(250, Math.floor(secs * 1000));
+      this.wheel.spinToIndex(winnerIndex, ms, 3, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
       return;
     }
     this.showToast('Wheel is not ready', 'warn');

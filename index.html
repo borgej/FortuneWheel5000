@@ -63,6 +63,10 @@
             <label for="winnerTimerMinutes">Winner Timer (minutes) — 0 for unlimited</label>
             <input id="winnerTimerMinutes" type="number" min="0" step="1" placeholder="2" />
           </div>
+          <div class="input-group">
+            <label for="spinDurationSeconds">Spin Duration (seconds)</label>
+            <input id="spinDurationSeconds" type="number" min="1" step="0.5" placeholder="5" />
+          </div>
           <div class="toolbar" style="grid-column: 1 / -1; margin-bottom:8px;">
             <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
             <button id="lockBtn" class="btn-secondary" title="Toggle accepting entries">Lock Entries</button>
@@ -77,6 +81,9 @@
             </label>
             <label class="toggle" title="Play tick sounds while spinning">
               <input id="tickToggle" type="checkbox" checked /> Tick sounds
+            </label>
+            <label class="toggle" title="Use a smoother slow-down so the wheel drains out at the end">
+              <input id="spinSmoothEasing" type="checkbox" checked /> Smoother slow-down
             </label>
           </div>
         </div>
