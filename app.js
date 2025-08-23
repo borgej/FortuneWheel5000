@@ -39,7 +39,10 @@ const APP_CONFIG = {
     keywordPrefix: '!',
     keywordText: 'giveaway',
     winnerTimerMinutes: 2,
-    entryTimerMinutes: 0
+  entryTimerMinutes: 0,
+  // New: wheel behavior defaults
+  spinDurationSeconds: 5,
+  spinSmoothEasing: true
   }
 };
 
@@ -304,8 +307,8 @@ class TwitchGiveawayApp {
     this.entryTotalSeconds = 0;
     this.excludedWinners = new Set();
   // Spin behavior
-  this.spinDurationSeconds = 5;
-  this.spinSmoothEasing = true;
+  this.spinDurationSeconds = APP_CONFIG?.defaults?.spinDurationSeconds ?? 5;
+  this.spinSmoothEasing = APP_CONFIG?.defaults?.spinSmoothEasing ?? true;
     this.audioCtx = null;
     this._lastTickStep = null;
     this._debugTimeouts = [];
@@ -345,7 +348,7 @@ class TwitchGiveawayApp {
       tickToggle: document.getElementById('tickToggle'),
       startGiveawayBtn: document.getElementById('startGiveawayBtn'),
       entryTimerMinutesInput: document.getElementById('entryTimerMinutes'),
-  spinDurationSecondsInput: document.getElementById('spinDurationSeconds'),
+  // spin controls removed from UI; config via APP_CONFIG
       entryInfo: document.getElementById('entryInfo'),
       entryOverlay: document.getElementById('entryOverlay'),
       hideSensitive: document.getElementById('hideSensitive'),
@@ -355,7 +358,7 @@ class TwitchGiveawayApp {
       confirmMessage: document.getElementById('confirmMessage'),
       confirmYes: document.getElementById('confirmYes'),
       confirmNo: document.getElementById('confirmNo'),
-  spinSmoothEasingToggle: document.getElementById('spinSmoothEasing'),
+  // spin controls removed from UI; config via APP_CONFIG
     };
 
     this.bindEvents();
@@ -485,21 +488,7 @@ class TwitchGiveawayApp {
         this.saveToStorage();
       }
     });
-    if (this.elements.spinDurationSecondsInput) {
-      this.elements.spinDurationSecondsInput.addEventListener('input', (e) => {
-        const v = parseFloat(e.target.value);
-        if (!isNaN(v) && v > 0) {
-          this.spinDurationSeconds = v;
-          this.saveToStorage();
-        }
-      });
-    }
-    if (this.elements.spinSmoothEasingToggle) {
-      this.elements.spinSmoothEasingToggle.addEventListener('change', (e) => {
-        this.spinSmoothEasing = !!e.target.checked;
-        this.saveToStorage();
-      });
-    }
+  // spin controls are not exposed in UI
   }
 
   restoreFromStorage() {
@@ -536,14 +525,8 @@ class TwitchGiveawayApp {
             this.entryTimerMinutes = Math.max(0, s.entryTimerMinutes|0);
             if (this.elements.entryTimerMinutesInput) this.elements.entryTimerMinutesInput.value = String(this.entryTimerMinutes);
           }
-          if (typeof s.spinDurationSeconds === 'number' && s.spinDurationSeconds > 0) {
-            this.spinDurationSeconds = s.spinDurationSeconds;
-          }
-          if (typeof s.spinSmoothEasing === 'boolean') {
-            this.spinSmoothEasing = s.spinSmoothEasing;
-          }
-          if (this.elements.spinDurationSecondsInput) this.elements.spinDurationSecondsInput.value = String(this.spinDurationSeconds);
-          if (this.elements.spinSmoothEasingToggle) this.elements.spinSmoothEasingToggle.checked = !!this.spinSmoothEasing;
+          if (typeof s.spinDurationSeconds === 'number' && s.spinDurationSeconds > 0) this.spinDurationSeconds = s.spinDurationSeconds;
+          if (typeof s.spinSmoothEasing === 'boolean') this.spinSmoothEasing = s.spinSmoothEasing;
           if (typeof s.enableConfetti === 'boolean') { this.enableConfetti = s.enableConfetti; if (this.elements.confettiToggle) this.elements.confettiToggle.checked = s.enableConfetti; }
           if (typeof s.enableSad === 'boolean') { this.enableSad = s.enableSad; if (this.elements.sadToggle) this.elements.sadToggle.checked = s.enableSad; }
           if (typeof s.enableTick === 'boolean') { this.enableTick = s.enableTick; if (this.elements.tickToggle) this.elements.tickToggle.checked = s.enableTick; }
@@ -565,11 +548,8 @@ class TwitchGiveawayApp {
             this.elements.channelInput.value = d.channelName;
             this.channelName = (d.channelName || '').trim().toLowerCase();
           }
-          if (typeof d.spinDurationSeconds === 'number' && d.spinDurationSeconds > 0) {
-            this.spinDurationSeconds = d.spinDurationSeconds;
-          }
-          if (this.elements.spinDurationSecondsInput) this.elements.spinDurationSecondsInput.value = String(this.spinDurationSeconds);
-          if (this.elements.spinSmoothEasingToggle) this.elements.spinSmoothEasingToggle.checked = !!this.spinSmoothEasing;
+          if (typeof d.spinDurationSeconds === 'number' && d.spinDurationSeconds > 0) this.spinDurationSeconds = d.spinDurationSeconds;
+          if (typeof d.spinSmoothEasing === 'boolean') this.spinSmoothEasing = d.spinSmoothEasing;
         }
       }
 
@@ -1166,8 +1146,8 @@ class TwitchGiveawayApp {
     if (this.wheel && this.wheel.spinToIndex) {
       this._pendingWinnerIndex = winnerIndex;
       // Read the latest value from the input to reflect user changes even if not yet persisted
-      let secs = parseFloat(this.elements.spinDurationSecondsInput?.value);
-      if (isNaN(secs) || secs <= 0) secs = this.spinDurationSeconds || 5;
+  // Use configured duration; no UI control
+  let secs = this.spinDurationSeconds || 5;
       // Clamp to sensible bounds
       secs = Math.max(0.5, Math.min(60, secs));
       const ms = Math.max(250, Math.floor(secs * 1000));
