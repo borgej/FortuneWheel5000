@@ -140,12 +140,13 @@ class SimpleCanvasWheel {
       ctx.fillText(clipped, 0, 0);
       ctx.restore();
     }
-    // outer border
-    ctx.beginPath();
-    ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(56,189,248,0.35)';
-    ctx.lineWidth = 6;
-    ctx.stroke();
+  // outer border (avoid green hues for chroma key)
+  ctx.beginPath();
+  ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+  const isGreen = document.body.classList.contains('greenscreen');
+  ctx.strokeStyle = isGreen ? '#9ca3af' : 'rgba(56,189,248,0.35)'; // gray in greenscreen
+  ctx.lineWidth = 6;
+  ctx.stroke();
     ctx.restore();
   }
 
@@ -336,7 +337,8 @@ class TwitchGiveawayApp {
       connectionStatus: document.getElementById('connectionStatus'),
       wheelElement: document.getElementById('wheelElement'),
       spinBtn: document.getElementById('spinBtn'),
-      clearBtn: document.getElementById('clearBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  greenScreenBtn: document.getElementById('greenScreenBtn'),
       participantsList: document.getElementById('participantsList'),
       participantCount: document.getElementById('participantCount'),
       historyList: document.getElementById('historyList'),
@@ -449,7 +451,8 @@ class TwitchGiveawayApp {
     this.elements.lockBtn.addEventListener('click', () => this.toggleEntries());
     this.elements.debugAddBtn.addEventListener('click', () => this.addDebugParticipants());
     this.elements.spinBtn.addEventListener('click', () => this.spinWheel());
-    this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
+  if (this.elements.clearBtn) this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
+  if (this.elements.greenScreenBtn) this.elements.greenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
     this.elements.winnerModal.addEventListener('click', (e) => { if (e.target === this.elements.winnerModal) this.closeWinnerModal(); });
@@ -539,6 +542,9 @@ class TwitchGiveawayApp {
             this.elements.hideSensitive.checked = s.hideSensitive;
             this.applyHideSensitive();
           }
+          if (typeof s.greenScreen === 'boolean') {
+            document.body.classList.toggle('greenscreen', !!s.greenScreen);
+          }
         }
       } else {
         // No stored settings — seed keyword defaults if provided
@@ -602,6 +608,7 @@ class TwitchGiveawayApp {
         enableSad: !!this.enableSad,
         enableTick: !!this.enableTick,
         hideSensitive: !!this.elements.hideSensitive?.checked,
+  greenScreen: document.body.classList.contains('greenscreen'),
       };
       localStorage.setItem('mw.settings', JSON.stringify(settings));
       // Participants as entries [name, {followData, ts}]
@@ -617,6 +624,13 @@ class TwitchGiveawayApp {
     } catch (e) {
       console.warn('saveToStorage failed', e);
     }
+  }
+
+  toggleGreenScreen() {
+    const isOn = document.body.classList.toggle('greenscreen');
+    this.saveToStorage();
+    // Resize wheel canvas to fit new layout
+    try { if (this.wheel && this.wheel.resize) this.wheel.resize(); } catch {}
   }
 
   checkForToken() {

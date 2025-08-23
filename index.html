@@ -10,7 +10,7 @@
   <div class="container">
     <div class="leftbar">
       <div class="stream-title" id="streamTitle">FortuneWheel5000</div>
-      <div class="stream-subtitle">made with <span class="heart" role="img" aria-label="love">❤️</span> by <a href="http://www.twitch.tv/beejeey" target="_blank" rel="noopener noreferrer">BeeJeey</a></div>
+      <div class="stream-subtitle">made with <span class="heart" role="img" aria-label="love">❤️</span> by <a href="http://www.twitch.tv/beejeey" target="_blank" rel="noopener noreferrer">BeeJeey</a> for Majorpar!</div>
       <div class="donate-row" id="donateRow">
         <div class="donate-group">
           <button class="donate-close" id="donateClose" aria-label="Hide donation" title="Hide this box">×</button>
@@ -104,13 +104,16 @@
       <div id="entryInfo" style="opacity:.9;font-size:12px;margin-top:2px"></div>
       <div class="giveaway-controls">
         <button id="spinBtn" class="btn-primary" disabled>Spin the Wheel</button>
-        <button id="clearBtn" class="btn-danger">Clear Participants</button>
+  <button id="greenScreenBtn" class="btn-secondary" title="Toggle green screen mode">Green Screen</button>
       </div>
     </div>
 
     <div class="sidebar">
       <div class="participants-list">
         <h3>Participants (<span id="participantCount">0</span>)</h3>
+        <div class="participants-actions">
+          <button id="clearBtn" class="btn-danger" title="Remove everyone from the current list">Clear</button>
+        </div>
         <div id="participantsList"></div>
       </div>
     </div>

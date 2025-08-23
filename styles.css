@@ -130,6 +130,18 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 .stream-subtitle .heart { margin: 0 2px; }
 .stream-subtitle a:hover { text-decoration: underline; }
 .giveaway-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.participants-list { position: relative; }
+.participants-list h3 { padding-right: 140px; }
+.participants-actions { height: 0; margin: 0; }
+.participants-actions #clearBtn {
+  position: absolute;
+  top: 0px;
+  right: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  z-index: 2;
+}
 .sidebar { display: flex; flex-direction: column; gap: 16px; height: 100%; max-height: calc(100vh - 40px); overflow: auto; }
 .leftbar { display: flex; flex-direction: column; gap: 16px; height: 100%; max-height: none; overflow-y: hidden; overflow-x: hidden; min-height: 0; }
 /* Make history card consume remaining vertical space so its bottom aligns with center/right columns */
@@ -178,3 +190,22 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
   .entry-overlay { font-size: 64px; }
   .stream-title { font-size: 40px; }
 }
+
+/* Green screen mode: hide side columns and set chroma key background */
+.greenscreen body, body.greenscreen {
+  background: #00ff00 !important;
+}
+body.greenscreen .leftbar,
+body.greenscreen .sidebar,
+body.greenscreen .donate-row,
+body.greenscreen .stream-title,
+body.greenscreen .stream-subtitle,
+body.greenscreen #historyCard { display: none !important; }
+body.greenscreen .container {
+  grid-template-columns: 1fr !important;
+  width: 100% !important;
+}
+body.greenscreen .card.wheel-container { box-shadow: none !important; border: none !important; background: transparent !important; }
+body.greenscreen .wheel-stage { box-shadow: none !important; background: transparent !important; }
+body.greenscreen .wheel { box-shadow: none !important; }
+body.greenscreen .wheel-pointer { box-shadow: none !important; filter: none !important; }
