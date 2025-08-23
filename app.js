@@ -315,6 +315,11 @@ class TwitchGiveawayApp {
     this._confirmResolve = null;
     this.giveawaySessionId = null;
     this.currentHistoryIndex = null;
+  // Randomize slice orientation per session
+  this._layoutSessionMarker = null;
+  this.layoutSliceOffset = 0;
+  // Track if history was actually loaded to avoid overwriting with empty on first save
+  this._historyLoaded = false;
 
     this.elements = {
       connectionPanel: document.getElementById('connectionPanel'),
@@ -571,9 +576,11 @@ class TwitchGiveawayApp {
 
       // History
       const hRaw = localStorage.getItem('mw.history');
-      if (hRaw) {
-        const arr = JSON.parse(hRaw);
-        if (Array.isArray(arr)) this.history = arr;
+      if (hRaw != null) {
+        try {
+          const arr = JSON.parse(hRaw);
+          if (Array.isArray(arr)) { this.history = arr; this._historyLoaded = true; }
+        } catch {}
       }
     } catch (e) {
       console.warn('restoreFromStorage failed', e);
@@ -601,8 +608,12 @@ class TwitchGiveawayApp {
       try { localStorage.setItem('mw.participants', JSON.stringify(Array.from(this.participants.entries()))); } catch {}
       // Excluded winners set
       try { localStorage.setItem('mw.excluded', JSON.stringify(Array.from(this.excludedWinners || []))); } catch {}
-      // History
-      try { localStorage.setItem('mw.history', JSON.stringify(this.history || [])); } catch {}
+      // History: only write if we loaded it successfully or we have non-empty in-memory history
+      try {
+        if (this._historyLoaded || (Array.isArray(this.history) && this.history.length > 0)) {
+          localStorage.setItem('mw.history', JSON.stringify(this.history || []));
+        }
+      } catch {}
     } catch (e) {
       console.warn('saveToStorage failed', e);
     }
@@ -847,7 +858,9 @@ class TwitchGiveawayApp {
     this.updateEntryInfo();
     if (this.entryTimerInterval) clearInterval(this.entryTimerInterval);
     if (this.entryTotalSeconds > 0) { this.entryTimerInterval = setInterval(()=>this.updateEntryInfo(), 1000); }
-    this.giveawaySessionId = 'g-' + Date.now();
+  this.giveawaySessionId = 'g-' + Date.now();
+  // reset layout offset for new session; will be randomized on first render
+  this._layoutSessionMarker = null; this.layoutSliceOffset = 0;
     this.currentHistoryIndex = null;
     this.elements.startGiveawayBtn.textContent = 'Stop Giveaway';
     this.elements.startGiveawayBtn.classList.remove('btn-primary');
@@ -1074,7 +1087,19 @@ class TwitchGiveawayApp {
   _renderSpinWheel(names) {
     const el = this.elements.wheelElement;
     el.innerHTML = '';
-    this.luckyNames = names.slice();
+    // Randomize the base slice orientation once per giveaway session so that
+    // identical participant counts don't always map to the same absolute angles.
+    if (this.giveawaySessionId && this._layoutSessionMarker !== this.giveawaySessionId) {
+      this._layoutSessionMarker = this.giveawaySessionId;
+      const n = Math.max(1, names.length);
+      this.layoutSliceOffset = Math.floor(Math.random() * n);
+    }
+    let rotated = names.slice();
+    if (this.layoutSliceOffset && rotated.length > 1) {
+      const o = ((this.layoutSliceOffset % rotated.length) + rotated.length) % rotated.length;
+      rotated = rotated.slice(o).concat(rotated.slice(0, o));
+    }
+    this.luckyNames = rotated.slice();
     const w = el.clientWidth, h = el.clientHeight;
     if (!w || !h) { setTimeout(() => { try { this._renderSpinWheel(names); } catch {} } , 100); return; }
     const host = document.createElement('div');
