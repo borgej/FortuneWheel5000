@@ -16,6 +16,9 @@ Upcoming features (maybe, depending on feedback/usage):
 - Giveaway info post to chat, needs Client ID and secret
 - Winner post to chat, needs Client ID and secret
 
+Customizable default values
+<img width="790" height="592" alt="image" src="https://github.com/user-attachments/assets/ffa21da3-04e8-4b5e-939d-7a7afdb0fbca" />
+
 <img width="2558" height="1304" alt="image" src="https://github.com/user-attachments/assets/6f13e0cc-0f0f-485d-a795-4bf83c823401" />
 <img width="2555" height="1304" alt="image" src="https://github.com/user-attachments/assets/570bf348-55a6-44dd-bf98-280550ea1693" />
 <img width="2557" height="1297" alt="image" src="https://github.com/user-attachments/assets/5ace5f55-ef51-444a-bfc0-10f96d33e79d" />
