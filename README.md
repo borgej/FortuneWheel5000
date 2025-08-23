@@ -1,5 +1,5 @@
 # FortuneWheel5000
-Twitch codeword giveaway wheel
+Twitch chat codeword giveaway wheel
 html / javascript application 
 
 This application is a simple html/js app that you can run locally on your computer to have a "wheel of fortune" like giveaway in your Twitch chat with a given keyword.
