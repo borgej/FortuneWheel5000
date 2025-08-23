@@ -17,6 +17,7 @@ Upcoming features (maybe, depending on feedback/usage):
 - Winner post to chat, needs Client ID and secret
 
 Customizable default values
+
 <img width="790" height="592" alt="image" src="https://github.com/user-attachments/assets/ffa21da3-04e8-4b5e-939d-7a7afdb0fbca" />
 
 <img width="2558" height="1304" alt="image" src="https://github.com/user-attachments/assets/6f13e0cc-0f0f-485d-a795-4bf83c823401" />
