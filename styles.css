@@ -42,7 +42,68 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 /* Remove border around the wheel card only */
 .wheel-stage { position: relative; width: var(--wheel-size); height: var(--wheel-size); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .wheel { width: var(--wheel-size); height: var(--wheel-size); border-radius: 50%; position: relative; overflow: hidden; border: none; box-shadow: 0 0 40px rgba(59,130,246,0.35), 0 10px 40px rgba(0,0,0,0.45); transition: transform 4.2s cubic-bezier(0.23,1,0.32,1); }
-.wheel-pointer { display: block; position: absolute; top: 50%; right: 0; transform: translateY(-50%); width: 0; height: 0; border-top: 28px solid transparent; border-bottom: 28px solid transparent; border-left: 0 solid transparent; border-right: 56px solid #0e7490; filter: drop-shadow(0 0 10px rgba(14,116,144,0.8)); z-index: 10; }
+.wheel-pointer {
+  position: absolute;
+  top: 50%;
+  right: -6px; /* hang slightly outside the wheel for emphasis */
+  transform: translateY(-50%);
+  width: 88px;
+  height: 40px;
+  /* vibrant gradient body (red theme) */
+  background: linear-gradient(90deg, #b91c1c, #ef4444 45%, #f97316);
+  /* arrow shape pointing into the wheel */
+  clip-path: polygon(100% 0, 100% 100%, 56% 100%, 0 50%, 56% 0);
+  border-radius: 10px;
+  /* neon glow + inner stroke */
+  box-shadow:
+    0 6px 24px rgba(239,68,68,0.55),
+    0 0 0 2px rgba(190,18,60,0.95) inset,
+    0 0 20px rgba(249,115,22,0.35);
+  filter: drop-shadow(0 0 10px rgba(239,68,68,0.85));
+  z-index: 10;
+  pointer-events: none;
+  animation: pointerPulse 1.8s ease-in-out infinite;
+}
+
+.wheel-pointer::before {
+  /* decorative circular cap/screw on the pointer */
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fee2e2, #fca5a5 40%, #ef4444 80%);
+  box-shadow: 0 0 10px rgba(239,68,68,0.6), 0 0 0 1px rgba(190,18,60,0.85) inset;
+}
+
+.wheel-pointer::after {
+  /* subtle highlight sheen across the pointer */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient( to bottom, rgba(255,255,255,0.22), rgba(255,255,255,0) 55% );
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+@keyframes pointerPulse {
+  0%, 100% {
+    box-shadow:
+  0 6px 22px rgba(239,68,68,0.55),
+  0 0 0 2px rgba(190,18,60,0.95) inset,
+  0 0 16px rgba(249,115,22,0.35);
+  }
+  50% {
+    box-shadow:
+  0 8px 28px rgba(239,68,68,0.75),
+  0 0 0 2px rgba(190,18,60,1) inset,
+  0 0 24px rgba(249,115,22,0.5);
+  }
+}
 .empty-wheel { display: flex; align-items: center; justify-content: center; width: var(--wheel-size); height: var(--wheel-size); border: 3px dashed rgba(148,163,184,0.35); border-radius: 50%; color: rgba(203,213,225,0.8); text-align: center; padding: 16px; }
 .entry-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none; z-index: 9; font-weight: 900; letter-spacing: 1px; font-size: 56px; color: #ecfeff; 
   /* Strong black outline for readability */

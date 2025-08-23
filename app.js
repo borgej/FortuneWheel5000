@@ -1321,7 +1321,7 @@ class TwitchGiveawayApp {
     const el = this.elements.historyList;
     el.innerHTML = '';
     if (this.history.length === 0) { el.innerHTML = '<div style="opacity:.9">No giveaways yet.</div>'; this.updateHistoryListHeight(); return; }
-    const recent = this.history; // show all entries
+  const recent = this.history.slice().reverse(); // newest first
     for (const h of recent) {
       const d = new Date(h.updatedAt || h.endedAt || h.startedAt || h.at || Date.now());
       const ts = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
