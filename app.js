@@ -25,6 +25,7 @@ const APP_CONFIG = {
     url: 'https://paypal.me/borgej',
     label: 'Donate'
   },
+  // Set to false when you dont want to test anymore
   ui: {
     showAddTestParticipants: true
   },
@@ -35,14 +36,14 @@ const APP_CONFIG = {
   },
   defaults: {
     // Optional: set a default channel to prefill the input
-    channelName: 'BeeJeey',
+    channelName: 'Majorpar',
     keywordPrefix: '!',
-    keywordText: 'giveaway',
+    keywordText: 'majorwheel',
     winnerTimerMinutes: 2,
-  entryTimerMinutes: 0,
-  // New: wheel behavior defaults
-  spinDurationSeconds: 5,
-  spinSmoothEasing: true
+    entryTimerMinutes: 0,
+    // New: wheel behavior defaults
+    spinDurationSeconds: 8,
+    spinSmoothEasing: true
   }
 };
 
@@ -1120,7 +1121,23 @@ class TwitchGiveawayApp {
     host.style.position = 'absolute'; host.style.left = '0'; host.style.top = '0'; host.style.width = '100%'; host.style.height = '100%';
     host.style.background = 'radial-gradient(300px 300px at 50% 50%, rgba(0,0,0,0.1), rgba(0,0,0,0) 70%)';
     el.appendChild(host);
-    const colors = ['#0ea5a3','#06b6d4','#22d3ee','#38bdf8','#3b82f6','#6366f1','#7c3aed','#8b5cf6','#a78bfa','#c084fc','#d946ef','#ec4899','#f472b6','#10b981'];
+    // Chroma-key-safe palette (avoid greens/teals that can collide with keying)
+    const colors = [
+      '#ef4444', // red
+      '#f97316', // orange
+      '#f59e0b', // amber
+      '#fb923c', // light orange
+      '#fca5a5', // light red
+      '#f472b6', // pink
+      '#ec4899', // fuchsia
+      '#d946ef', // purple/magenta
+      '#a855f7', // violet
+      '#8b5cf6', // violet
+      '#6366f1', // indigo
+      '#3b82f6', // blue
+      '#60a5fa', // light blue
+      '#93c5fd'  // lighter blue
+    ];
     const pickTextColor = (hex) => {
       const h = hex.replace('#','');
       const r = parseInt(h.substring(0,2),16);

@@ -41,7 +41,7 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 .wheel-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: var(--wheel-size); gap: 12px; max-height: calc(100vh - 40px); height: 100%; }
 /* Remove border around the wheel card only */
 .wheel-stage { position: relative; width: var(--wheel-size); height: var(--wheel-size); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.wheel { width: var(--wheel-size); height: var(--wheel-size); border-radius: 50%; position: relative; overflow: hidden; border: none; box-shadow: 0 0 40px rgba(59,130,246,0.35), 0 10px 40px rgba(0,0,0,0.45); transition: transform 4.2s cubic-bezier(0.23,1,0.32,1); }
+.wheel { width: var(--wheel-size); height: var(--wheel-size); border-radius: 50%; position: relative; overflow: hidden; border: none; box-shadow: 0 0 40px rgba(59,130,246,0.35), 0 10px 40px rgba(0,0,0,0.45); }
 .wheel-pointer {
   position: absolute;
   top: 50%;
@@ -131,7 +131,7 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 .stream-subtitle a:hover { text-decoration: underline; }
 .giveaway-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .participants-list { position: relative; }
-.participants-list h3 { padding-right: 140px; }
+.participants-list h3 { padding-right: 140px; margin-bottom: 8px; }
 .participants-actions { height: 0; margin: 0; }
 .participants-actions #clearBtn {
   position: absolute;
@@ -148,9 +148,7 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 #historyCard { flex: 1 1 0; display: flex; flex-direction: column; min-height: 0; }
 #historyCard > div:first-child { /* header row within the card */ flex: 0 0 auto; }
 #historyList { flex: 1 1 0; min-height: 0; overflow: auto; padding-right: 4px; max-height: none; }
-/* Limit history list height and make it independently scrollable */
-#historyList { max-height: 200px; overflow: auto; padding-right: 4px; }
-.participants-list h3, .history h3 { margin-bottom: 8px; }
+/* .history h3 removed: no .history container in markup */
 .participant-item { background: rgba(2,6,12,0.6); border-left: 4px solid #7c3aed; border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; box-shadow: 0 1px 0 rgba(124,58,237,0.25) inset; }
 .participant-name { font-weight: 800; color: #e2e8f0; }
 .participant-info { text-align: right; font-size: 12px; color: rgba(203,213,225,0.9); }
@@ -192,7 +190,7 @@ button { padding: 10px 14px; border: none; border-radius: 10px; font-weight: 800
 }
 
 /* Green screen mode: hide side columns and set chroma key background */
-.greenscreen body, body.greenscreen {
+body.greenscreen {
   background: #00ff00 !important;
 }
 body.greenscreen .leftbar,
@@ -209,3 +207,5 @@ body.greenscreen .card.wheel-container { box-shadow: none !important; border: no
 body.greenscreen .wheel-stage { box-shadow: none !important; background: transparent !important; }
 body.greenscreen .wheel { box-shadow: none !important; }
 body.greenscreen .wheel-pointer { box-shadow: none !important; filter: none !important; }
+/* Keep green pure under overlays in greenscreen mode */
+body.greenscreen .winner-announcement { background: transparent !important; }
