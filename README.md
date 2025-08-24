@@ -37,6 +37,6 @@ twitch<img width="2232" height="1325" alt="image" src="https://github.com/user-a
 <img width="2231" height="1323" alt="image" src="https://github.com/user-attachments/assets/e402b649-38f9-42b1-af01-e7da938c8601" />
 <img width="2229" height="1321" alt="image" src="https://github.com/user-attachments/assets/b4fb9575-bf5e-4efa-a6dd-c8bbc748afba" />
 
-¤ config
+# config
 <img width="1036" height="669" alt="image" src="https://github.com/user-attachments/assets/12970d98-f791-4d26-8d36-68593bf99f3d" />
 
