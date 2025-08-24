@@ -10,8 +10,10 @@ Some features:
 - No API for conencting to Twitch as of now
 - Multiple winners per giveaway
 - Timed giveaway (optional)
-- Chat from winner popup
 - Timed claim time for winner (optional)
+- Chat from winner popup
+- Chromakey wheel only
+- Chromakey "safe" color palette
 
 Upcoming features (maybe, depending on feedback/usage):
 - Giveaway info post to chat, needs Client ID and secret
