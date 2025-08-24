@@ -9,6 +9,7 @@ Some features:
 - Local storage for history
 - No API for conencting to Twitch as of now
 - Multiple winners per giveaway
+- Animated participants joining list with their slice color
 - Timed giveaway (optional)
 - Timed claim time for winner (optional)
 - Chat from winner popup
@@ -26,9 +27,6 @@ Make an issue in the repo if you are interested in using this app! <3
 <img width="2221" height="1322" alt="image" src="https://github.com/user-attachments/assets/2d49492b-bd6d-4e37-9f0a-e4224e8584a9" />
 <img width="2226" height="1317" alt="image" src="https://github.com/user-attachments/assets/caafd0f5-72bd-4c14-9def-06ff09494ed8" />
 <img width="2230" height="1317" alt="image" src="https://github.com/user-attachments/assets/942fe939-43fc-4649-9670-ce8cc4c9e652" />
-
-https://github.com/user-attachments/assets/de90ba49-3040-4b17-a9c0-7ca18ce1bb20
-
 <img width="2231" height="1321" alt="image" src="https://github.com/user-attachments/assets/67995ac0-039c-4d1a-a002-bd8a7786321f" />
 <img width="2237" height="1318" alt="image" src="https://github.com/user-attachments/assets/a0d809d6-b1b2-4b44-bb40-08ac0c9d4f03" />
 <img width="2233" height="1324" alt="image" src="https://github.com/user-attachments/assets/a718906d-ed97-4aa9-b298-44f15d3c4ec7" />
