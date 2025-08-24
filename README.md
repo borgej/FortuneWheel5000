@@ -21,8 +21,6 @@ Currently exclusive rights for Twitch streamer Majorpar(http://www.twitch.tv/maj
 
 Make an issue in the repo if you are interested in using this app! <3
 
-Customizable default values
-
 <img width="2221" height="1322" alt="image" src="https://github.com/user-attachments/assets/2d49492b-bd6d-4e37-9f0a-e4224e8584a9" />
 <img width="2226" height="1317" alt="image" src="https://github.com/user-attachments/assets/caafd0f5-72bd-4c14-9def-06ff09494ed8" />
 <img width="2230" height="1317" alt="image" src="https://github.com/user-attachments/assets/942fe939-43fc-4649-9670-ce8cc4c9e652" />
