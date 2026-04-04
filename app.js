@@ -42,7 +42,7 @@ const APP_CONFIG = {
     winnerTimerMinutes: 2,
     entryTimerMinutes: 0,
     // New: wheel behavior defaults
-    spinDurationSeconds: 12,
+    spinDurationSeconds: 15,
     spinSmoothEasing: true
   }
 };
@@ -226,16 +226,9 @@ class SimpleCanvasWheel {
     const endRot = afterKickRot + (Math.PI * 2) * revolutions + delta;
 
     const easeInOut = (t) => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-    // Two-phase: brisk deceleration covers 82% of travel in 70% of time,
-    // then a prolonged slow crawl through the last 18% — the suspense part.
-    const easeSuspense = (t) => {
-      if (t < 0.7) {
-        const t1 = t / 0.7;
-        return (1 - Math.pow(1 - t1, 3)) * 0.82;
-      }
-      const t2 = (t - 0.7) / 0.3;
-      return 0.82 + t2 * t2 * 0.18;
-    };
+    // easeOutCubic: spends ~3 seconds in the clearly-visible slow zone before
+    // stopping — wheel passes individual slices one by one at the end.
+    const easeSuspense = (t) => 1 - Math.pow(1 - t, 3);
 
     const t0 = performance.now();
     const step = (now) => {
@@ -1039,9 +1032,34 @@ class TwitchGiveawayApp {
     this.showToast(`Adding ${count} test participant(s)`, 'info');
   }
 
+  _randomTwitchName() {
+    const adj = ['dark','frost','shadow','neon','swift','iron','wild','night','storm','blazing','silent','royal','hyper','void','lucky','epic','crispy','golden','mighty','tiny'];
+    const noun = ['wolf','fox','hawk','bear','panda','ninja','dragon','knight','sniper','wizard','goblin','raven','cobra','tiger','monk','ghost','reaper','viking','sloth','duck'];
+    const suffix = () => {
+      const r = Math.random();
+      if (r < 0.3) return '';
+      if (r < 0.55) return Math.floor(Math.random() * 999 + 1).toString();
+      if (r < 0.7) return '_' + Math.floor(Math.random() * 99 + 1);
+      if (r < 0.82) return 'tv';
+      if (r < 0.90) return 'gg';
+      if (r < 0.95) return '_plays';
+      return '_' + noun[Math.floor(Math.random() * noun.length)];
+    };
+    const styles = [
+      () => adj[~~(Math.random()*adj.length)] + '_' + noun[~~(Math.random()*noun.length)] + suffix(),
+      () => noun[~~(Math.random()*noun.length)] + suffix(),
+      () => adj[~~(Math.random()*adj.length)] + suffix(),
+      () => 'the' + noun[~~(Math.random()*noun.length)] + suffix(),
+      () => 'xx' + adj[~~(Math.random()*adj.length)] + noun[~~(Math.random()*noun.length)] + 'xx',
+      () => noun[~~(Math.random()*noun.length)] + '_' + adj[~~(Math.random()*adj.length)] + suffix(),
+      () => 'real_' + noun[~~(Math.random()*noun.length)] + suffix(),
+    ];
+    return styles[~~(Math.random() * styles.length)]().toLowerCase();
+  }
+
   _addOneTestParticipant() {
     let name;
-    do { name = ('tester' + Math.floor(Math.random()*1e6)).toLowerCase(); } while (this.participants.has(name));
+    do { name = this._randomTwitchName(); } while (this.participants.has(name));
     const follow = Math.random() < 0.6;
     const followData = { isFollower: follow, followDurationDays: 0, followDurationText: follow ? 'Unknown' : 'Not following' };
     this.participants.set(name, { followData, ts: Date.now() });
