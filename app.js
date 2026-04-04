@@ -1940,8 +1940,8 @@ const app = new TwitchGiveawayApp();
 
   const stored = mwGetCookie('mw.consent');
   if (!stored || !stored.decided) {
-    // First visit — show banner with analytics checked by default
-    if (analyticsCheckbox) analyticsCheckbox.checked = true;
+    // First visit — show banner with analytics unchecked (opt-in, GDPR compliant)
+    if (analyticsCheckbox) analyticsCheckbox.checked = false;
     banner.style.display = 'flex';
   } else {
     // Restore checkbox state for when settings are re-opened
