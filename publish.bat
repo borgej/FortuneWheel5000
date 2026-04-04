@@ -3,6 +3,7 @@ setlocal
 
 set DEST=\\mediaserver\c$\inetpub\wwwroot\FortuneWheel5000
 set VERSION=
+set TWITCH_CLIENT_ID=b84sr9z49lc7sz62bo23voxvj2x0bw
 
 :: Parse arguments
 :parse_args
@@ -59,6 +60,11 @@ for %%f in (%FILES%) do (
     )
     echo   Copied %%f
 )
+
+:: Inject Twitch Client ID into published app.js
+echo Injecting Twitch Client ID...
+powershell -Command "(Get-Content '%DEST%\app.js') -replace '__TWITCH_CLIENT_ID__', '%TWITCH_CLIENT_ID%' | Set-Content '%DEST%\app.js'"
+echo   Done.
 
 echo.
 echo Done! App published to %DEST%

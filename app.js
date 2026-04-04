@@ -40,7 +40,7 @@ function mwRemoveCookie(name) {
 const APP_CONFIG = {
   // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
   enableFollowerInfo: true,
-  clientId: 'b84sr9z49lc7sz62bo23voxvj2x0bw',
+  clientId: '__TWITCH_CLIENT_ID__',
   version: 'v1.1',
   // Explicit redirect URI — must match exactly what is registered in dev.twitch.tv.
   // Set to null to use window.location.origin + pathname automatically (local dev).
