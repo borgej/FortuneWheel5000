@@ -5,6 +5,13 @@ html / javascript application
 
 This application is a simple html/js app that you can run locally on your computer to have a "wheel of fortune" like giveaway in your Twitch chat with a given keyword.
 
+## Live version
+The app is publicly hosted and free to use — no installation needed:
+
+**[https://www.bjsolutions.no/FortuneWheel5000](https://www.bjsolutions.no/FortuneWheel5000)**
+
+Anyone can open it directly in their browser and start running giveaways.
+
 ## Features
 - Connects to Twitch chat via [tmi.js](https://tmijs.com/) (bundled), with a raw WebSocket IRC fallback — no server or API key required
 - Local storage for participants, settings, and giveaway history
