@@ -42,7 +42,7 @@ const APP_CONFIG = {
     winnerTimerMinutes: 2,
     entryTimerMinutes: 0,
     // New: wheel behavior defaults
-    spinDurationSeconds: 8,
+    spinDurationSeconds: 12,
     spinSmoothEasing: true
   }
 };
@@ -56,6 +56,8 @@ class SimpleCanvasWheel {
     this.onRest = onRest;
     this.rotation = 0; // radians; 0 means slice 0 starts at pointer (3 o'clock)
     this.anim = null;
+    this._idleAnim = null;
+    this._idleRunning = false;
     this._lastIndex = null;
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -98,82 +100,160 @@ class SimpleCanvasWheel {
     if (!this.items.length) return;
     const cx = w / 2, cy = h / 2;
     const r = Math.min(w, h) * 0.48;
+    const slice = this.sliceAngle;
+    const isGreen = document.body.classList.contains('greenscreen');
+
+    // -- Rotated section: slices, labels, pins, rim --
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(this.rotation);
-    const slice = this.sliceAngle;
+
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
       const start = i * slice;
       const end = start + slice;
-      // slice fill
+      const base = it.backgroundColor || '#999';
+
+      // Radial gradient fill — bright centre, richer toward rim
+      const grad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r);
+      grad.addColorStop(0, this._lightenColor(base, 55));
+      grad.addColorStop(0.65, base);
+      grad.addColorStop(1, this._darkenColor(base, 25));
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, r, start, end, false);
       ctx.closePath();
-      ctx.fillStyle = it.backgroundColor || '#999';
+      ctx.fillStyle = grad;
       ctx.fill();
-      // slice border
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+
+      // Slice border
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
       ctx.lineWidth = 2;
       ctx.stroke();
-      // label
+
+      // Label with soft shadow — font scales with slice arc width
       const mid = start + slice / 2;
       ctx.save();
-      // Rotate to slice mid-angle
       ctx.rotate(mid);
-      // Place text near the outer rim, upright, and make it read from rim toward center
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      const maxFont = Math.max(12, Math.min(24, r * 0.08));
-      ctx.font = `${Math.floor(maxFont)}px Segoe UI, sans-serif`;
-      ctx.fillStyle = it.labelColor || '#111827';
-      const outer = r * 0.94; // just inside rim
-      const inner = r * 0.25; // min inner radius for labels
-      const pathLen = outer - inner;
-      // Move to the rim along the slice axis
-      ctx.translate(outer, 0);
-      const text = (it.label || '').toString();
-      let clipped = text;
-      while (clipped.length > 1 && ctx.measureText(clipped).width > pathLen) {
-        clipped = clipped.slice(0, -1);
+      // Available tangential space at the label radius
+      const arcHeight = r * 0.85 * slice;
+      const fontSize = Math.floor(Math.min(22, arcHeight * 0.6, r * 0.08));
+      if (fontSize >= 7) {
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${fontSize}px Segoe UI, sans-serif`;
+        ctx.fillStyle = it.labelColor || '#111827';
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 4;
+        const outer = r * 0.94;
+        const inner = r * 0.25;
+        const pathLen = outer - inner;
+        ctx.translate(outer, 0);
+        const text = (it.label || '').toString();
+        let clipped = text;
+        while (clipped.length > 1 && ctx.measureText(clipped).width > pathLen) {
+          clipped = clipped.slice(0, -1);
+        }
+        ctx.fillText(clipped, 0, 0);
       }
-      ctx.fillText(clipped, 0, 0);
       ctx.restore();
     }
-  // outer border (avoid green hues for chroma key)
-  ctx.beginPath();
-  ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-  const isGreen = document.body.classList.contains('greenscreen');
-  ctx.strokeStyle = isGreen ? '#9ca3af' : 'rgba(56,189,248,0.35)'; // gray in greenscreen
-  ctx.lineWidth = 6;
-  ctx.stroke();
+
+    // Rim pins at each slice boundary
+    for (let i = 0; i < this.items.length; i++) {
+      const angle = i * slice;
+      const px = Math.cos(angle) * (r - 5);
+      const py = Math.sin(angle) * (r - 5);
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,80,80,0.35)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    // Outer border ring
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = isGreen ? '#9ca3af' : 'rgba(56,189,248,0.6)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.restore(); // end rotation
+
+    // -- Non-rotated centre hub --
+    ctx.save();
+    ctx.translate(cx, cy);
+    const hubR = Math.max(14, r * 0.085);
+    const hubGrad = ctx.createRadialGradient(-hubR * 0.3, -hubR * 0.3, 1, 0, 0, hubR);
+    hubGrad.addColorStop(0, '#f8fafc');
+    hubGrad.addColorStop(0.5, '#94a3b8');
+    hubGrad.addColorStop(1, '#1e293b');
+    ctx.beginPath();
+    ctx.arc(0, 0, hubR, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, hubR * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
     ctx.restore();
   }
 
-  spinToIndex(targetIndex, durationMs = 5000, revolutions = 3, options = {}) {
+  spinToIndex(targetIndex, durationMs = 5000, revolutions = 5, options = {}) {
     if (!this.items.length) return;
+    this.stopIdle();
     if (typeof this.onSpin === 'function') { try { this.onSpin(); } catch {} }
     const slice = this.sliceAngle;
-    // Allow a slight random landing offset inside the target slice so it doesn't always center
     const rand = Math.random();
-    const offsetFactor = (options.randomOffsetFactor ?? 0.6); // 0..1 fraction of half-slice
+    const offsetFactor = (options.randomOffsetFactor ?? 0.6);
     const maxOffset = (slice * 0.5) * Math.max(0, Math.min(1, offsetFactor));
-    const signedOffset = (rand * 2 - 1) * maxOffset; // [-maxOffset, +maxOffset]
+    const signedOffset = (rand * 2 - 1) * maxOffset;
     const desired = (2*Math.PI - (targetIndex + 0.5) * slice - signedOffset) % (2*Math.PI);
-    const start = this.rotation % (2*Math.PI);
-    let delta = (desired - start);
+    const startRot = this.rotation % (2*Math.PI);
+
+    // Kickback: wind back slightly before launching for a snappier feel
+    const kickAngle = Math.PI * 0.12;
+    const kickMs = Math.min(320, durationMs * 0.08);
+    const mainMs = durationMs - kickMs;
+    const afterKickRot = startRot - kickAngle;
+    let delta = (desired - afterKickRot);
     delta = (delta % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
-    const end = start + (Math.PI * 2) * revolutions + delta;
+    const endRot = afterKickRot + (Math.PI * 2) * revolutions + delta;
+
+    const easeInOut = (t) => t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+    // Two-phase: brisk deceleration covers 82% of travel in 70% of time,
+    // then a prolonged slow crawl through the last 18% — the suspense part.
+    const easeSuspense = (t) => {
+      if (t < 0.7) {
+        const t1 = t / 0.7;
+        return (1 - Math.pow(1 - t1, 3)) * 0.82;
+      }
+      const t2 = (t - 0.7) / 0.3;
+      return 0.82 + t2 * t2 * 0.18;
+    };
+
     const t0 = performance.now();
-    // Easing options: default cubic; optional quintic for a longer drain-out feel
-    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-    const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
-    const easing = options.smooth ? easeOutQuint : easeOutCubic;
     const step = (now) => {
-      const dt = Math.min(1, (now - t0) / durationMs);
-      const eased = easing(dt);
-      this.rotation = start + (end - start) * eased;
+      const elapsed = now - t0;
+
+      if (elapsed < kickMs) {
+        // Kickback phase
+        const t = elapsed / kickMs;
+        this.rotation = startRot - kickAngle * easeInOut(t);
+        this.draw();
+        this.anim = requestAnimationFrame(step);
+        return;
+      }
+
+      // Main spin phase
+      const dt = Math.min(1, (elapsed - kickMs) / mainMs);
+      const eased = easeSuspense(dt);
+      this.rotation = afterKickRot + (endRot - afterKickRot) * eased;
       this.draw();
       const idx = this.currentIndex();
       if (idx !== this._lastIndex) {
@@ -195,8 +275,41 @@ class SimpleCanvasWheel {
 
   destroy() {
     try { if (this.anim) cancelAnimationFrame(this.anim); } catch {}
+    try { this.stopIdle(); } catch {}
     try { if (this._ro) this._ro.disconnect(); } catch {}
     try { this.canvas.remove(); } catch {}
+  }
+
+  _lightenColor(hex, amount) {
+    const h = hex.replace('#', '');
+    const r = Math.min(255, Math.max(0, parseInt(h.substring(0,2), 16) + amount));
+    const g = Math.min(255, Math.max(0, parseInt(h.substring(2,4), 16) + amount));
+    const b = Math.min(255, Math.max(0, parseInt(h.substring(4,6), 16) + amount));
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+  }
+
+  _darkenColor(hex, amount) { return this._lightenColor(hex, -amount); }
+
+  startIdle() {
+    if (this._idleRunning || !this.items.length) return;
+    this._idleRunning = true;
+    let last = null;
+    const loop = (ts) => {
+      if (!this._idleRunning) return;
+      if (last !== null) {
+        const dt = Math.min(0.1, (ts - last) / 1000);
+        this.rotation = (this.rotation + 0.28 * dt) % (Math.PI * 2);
+        this.draw();
+      }
+      last = ts;
+      this._idleAnim = requestAnimationFrame(loop);
+    };
+    this._idleAnim = requestAnimationFrame(loop);
+  }
+
+  stopIdle() {
+    this._idleRunning = false;
+    if (this._idleAnim) { cancelAnimationFrame(this._idleAnim); this._idleAnim = null; }
   }
 }
 
@@ -272,7 +385,7 @@ class TwitchWSChat {
           const excl = prefix.indexOf('!');
           if (excl > 0) username = prefix.slice(0, excl);
         }
-        if (this.onMessage) this.onMessage({ username: (username||'').toLowerCase() }, message);
+        if (this.onMessage) this.onMessage({ username: (username||'').toLowerCase(), 'display-name': username }, message);
       }
     }
   }
@@ -967,7 +1080,11 @@ class TwitchGiveawayApp {
   async handleChatMessage(tags, message) {
     const rawMsg = (message || '').trim();
     let username = '';
-    if (tags) { username = (tags.username || tags['display-name'] || tags.login || '').toString().toLowerCase(); }
+    let displayName = '';
+    if (tags) {
+      displayName = (tags['display-name'] || tags.username || tags.login || '').toString();
+      username = displayName.toLowerCase();
+    }
     if (this.currentWinner && username === this.currentWinner && rawMsg) {
       this.appendWinnerMessage(username, rawMsg);
       if (!this.winnerAcknowledged) {
@@ -992,7 +1109,7 @@ class TwitchGiveawayApp {
     if (!username || this.participants.has(username)) return;
 
     const followData = await this.getFollowerInfo(username);
-    this.participants.set(username, { followData, ts: Date.now() });
+    this.participants.set(username, { displayName: displayName || username, followData, ts: Date.now() });
     if (!this._newlyAdded) this._newlyAdded = new Set();
     this._newlyAdded.add(username);
     this.saveToStorage();
@@ -1032,6 +1149,14 @@ class TwitchGiveawayApp {
   daysSince(date) { return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000*60*60*24))); }
   formatDuration(days) { if (days < 30) return `${days} days`; if (days < 365) return `${Math.floor(days/30)} months`; return `${Math.floor(days/365)} years`; }
 
+  removeParticipant(username) {
+    this.participants.delete(username);
+    if (this.excludedWinners) this.excludedWinners.delete(username.toLowerCase());
+    this.saveToStorage();
+    this.renderParticipants();
+    this.renderWheel();
+  }
+
   updateCombinedKeyword() { this.keyword = ((this.keywordPrefix || '') + (this.keywordText || '')).trim(); this.saveToStorage(); this.renderWheel(); }
 
   render() { if (this.elements && this.elements.lockBtn) { this.elements.lockBtn.textContent = this.keywordActive ? 'Lock Entries' : 'Unlock Entries'; } this.renderParticipants(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
@@ -1054,8 +1179,14 @@ class TwitchGiveawayApp {
           <div>${data.followData.followDurationText}</div>
         </div>` : '';
       item.innerHTML = `
-        <div class="participant-name">${username}</div>
+        <div class="participant-name">${data.displayName || username}</div>
         ${followHtml}`;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'participant-remove';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Remove from wheel';
+      removeBtn.addEventListener('click', () => this.removeParticipant(username));
+      item.appendChild(removeBtn);
       this.elements.participantsList.appendChild(item);
     }
     if (this._newlyAddedClearTimer) { try { clearTimeout(this._newlyAddedClearTimer); } catch {} }
@@ -1094,14 +1225,16 @@ class TwitchGiveawayApp {
     this.elements.spinBtn.disabled = false;
     el.className = 'wheel';
     el.style.position = 'relative';
-    el.innerHTML = '';
+    // Skip full rebuild while spinning to preserve the ongoing animation state
+    if (this.isSpinning) {
+      if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel`;
+      return;
+    }
     this._renderSpinWheel(names);
     if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel`;
   }
 
   _renderSpinWheel(names) {
-    const el = this.elements.wheelElement;
-    el.innerHTML = '';
     // Randomize the base slice orientation once per giveaway session so that
     // identical participant counts don't always map to the same absolute angles.
     if (this.giveawaySessionId && this._layoutSessionMarker !== this.giveawaySessionId) {
@@ -1115,28 +1248,12 @@ class TwitchGiveawayApp {
       rotated = rotated.slice(o).concat(rotated.slice(0, o));
     }
     this.luckyNames = rotated.slice();
-    const w = el.clientWidth, h = el.clientHeight;
-    if (!w || !h) { setTimeout(() => { try { this._renderSpinWheel(names); } catch {} } , 100); return; }
-    const host = document.createElement('div');
-    host.style.position = 'absolute'; host.style.left = '0'; host.style.top = '0'; host.style.width = '100%'; host.style.height = '100%';
-    host.style.background = 'radial-gradient(300px 300px at 50% 50%, rgba(0,0,0,0.1), rgba(0,0,0,0) 70%)';
-    el.appendChild(host);
+
     // Chroma-key-safe palette (avoid greens/teals that can collide with keying)
     const colors = [
-      '#ef4444', // red
-      '#f97316', // orange
-      '#f59e0b', // amber
-      '#fb923c', // light orange
-      '#fca5a5', // light red
-      '#f472b6', // pink
-      '#ec4899', // fuchsia
-      '#d946ef', // purple/magenta
-      '#a855f7', // violet
-      '#8b5cf6', // violet
-      '#6366f1', // indigo
-      '#3b82f6', // blue
-      '#60a5fa', // light blue
-      '#93c5fd'  // lighter blue
+      '#ef4444', '#f97316', '#f59e0b', '#fb923c', '#fca5a5',
+      '#f472b6', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6',
+      '#6366f1', '#3b82f6', '#60a5fa', '#93c5fd'
     ];
     const pickTextColor = (hex) => {
       const h = hex.replace('#','');
@@ -1146,14 +1263,31 @@ class TwitchGiveawayApp {
       const luminance = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
       return luminance > 0.6 ? '#111827' : '#f9fafb';
     };
-    const items = names.map((name, i) => ({ label: name, backgroundColor: colors[i % colors.length], labelColor: pickTextColor(colors[i % colors.length]) }));
-    this.sliceColorMap = new Map();
-    for (const it of items) this.sliceColorMap.set(it.label, it.backgroundColor);
+    const items = rotated.map((name, i) => ({ label: this.participants.get(name)?.displayName || name, backgroundColor: colors[i % colors.length], labelColor: pickTextColor(colors[i % colors.length]) }));
+    this.sliceColorMap = new Map(items.map(it => [it.label, it.backgroundColor]));
+
+    // Fast path: wheel already exists — just update the items in-place
+    if (this.wheel) {
+      this.wheel.setItems(items);
+      this.renderParticipants();
+      return;
+    }
+
+    // Creation path: first time or after wheel was destroyed
+    const el = this.elements.wheelElement;
+    el.innerHTML = '';
+    const w = el.clientWidth, h = el.clientHeight;
+    if (!w || !h) { setTimeout(() => { try { this._renderSpinWheel(names); } catch {} }, 100); return; }
+    const host = document.createElement('div');
+    host.style.position = 'absolute'; host.style.left = '0'; host.style.top = '0'; host.style.width = '100%'; host.style.height = '100%';
+    host.style.background = 'radial-gradient(300px 300px at 50% 50%, rgba(0,0,0,0.1), rgba(0,0,0,0) 70%)';
+    el.appendChild(host);
     this.wheel = new SimpleCanvasWheel(host, {
       items,
       onSpin: () => { this._lastTickStep = null; },
       onCurrentIndexChange: (e) => { if (!this.enableTick) return; if (this._lastTickStep !== e.currentIndex) { this._lastTickStep = e.currentIndex; this._playTick(); } },
       onRest: (e) => {
+        document.body.classList.remove('is-spinning');
         try {
           let idx = (typeof this._pendingWinnerIndex === 'number') ? this._pendingWinnerIndex : e.currentIndex;
           if (typeof idx !== 'number' || isNaN(idx)) idx = 0;
@@ -1197,17 +1331,17 @@ class TwitchGiveawayApp {
     if (this.excludedWinners && this.excludedWinners.size) names = names.filter(n => !this.excludedWinners.has(n));
     if (names.length === 0) { this.isSpinning = false; this.elements.spinBtn.disabled = false; this.elements.spinBtn.textContent = 'Spin the Wheel'; return; }
     if (this.elements.entryOverlay) this.elements.entryOverlay.style.display = 'none';
+    document.body.classList.add('is-spinning');
     // Winner index is random each spin; no bias
     const winnerIndex = Math.floor(Math.random() * names.length);
     if (this.wheel && this.wheel.spinToIndex) {
       this._pendingWinnerIndex = winnerIndex;
-      // Read the latest value from the input to reflect user changes even if not yet persisted
   // Use configured duration; no UI control
   let secs = this.spinDurationSeconds || 5;
       // Clamp to sensible bounds
       secs = Math.max(0.5, Math.min(60, secs));
       const ms = Math.max(250, Math.floor(secs * 1000));
-      this.wheel.spinToIndex(winnerIndex, ms, 3, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
+      this.wheel.spinToIndex(winnerIndex, ms, 5, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
       return;
     }
     this.showToast('Wheel is not ready', 'warn');
@@ -1235,7 +1369,7 @@ class TwitchGiveawayApp {
     this.winnerAcknowledged = false;
     this.sadStopRequested = true;
     try { const c = document.getElementById('confettiCanvas'); if (c) { const x = c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } } catch {}
-    this.elements.winnerName.textContent = winner;
+    this.elements.winnerName.textContent = this.participants.get(winner)?.displayName || winner;
     this.elements.winnerMeta.textContent = (APP_CONFIG.enableFollowerInfo && fd) ? `${fd.isFollower ? 'Follower' : 'Not Following'} • ${fd.followDurationText}` : '';
     this.elements.winnerChat.innerHTML = '';
     this.elements.winnerChat.style.display = 'none';
