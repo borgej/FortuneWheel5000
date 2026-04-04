@@ -36,9 +36,9 @@ const APP_CONFIG = {
   },
   defaults: {
     // Optional: set a default channel to prefill the input
-    channelName: 'Majorpar',
+    channelName: 'BeeJeey',
     keywordPrefix: '!',
-    keywordText: 'majorwheel',
+    keywordText: 'wheel',
     winnerTimerMinutes: 2,
     entryTimerMinutes: 0,
     // New: wheel behavior defaults
