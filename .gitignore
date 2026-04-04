@@ -1,0 +1,10 @@
+# Publish destination
+\\mediaserver\c$\inetpub\wwwroot\FortuneWheel5000\
+
+# Node
+node_modules\
+npm-debug.log
+
+# OS
+Thumbs.db
+.DS_Store

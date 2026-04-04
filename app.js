@@ -16,11 +16,35 @@
   'https://unpkg.com/tmi.js@1.8.5/dist/tmi.min.js'
 ]);
 
+// ---------------------------------------------------------------------------
+// Cookie helpers — used for settings and consent (localStorage kept for large
+// gameplay data: participants, history, excluded winners)
+// ---------------------------------------------------------------------------
+function mwSetCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(typeof value === 'string' ? value : JSON.stringify(value)) + '; expires=' + expires + '; path=/; SameSite=Lax';
+}
+function mwGetCookie(name) {
+  const match = document.cookie.split('; ').find(function(r){ return r.startsWith(name + '='); });
+  if (!match) return null;
+  const raw = decodeURIComponent(match.slice(name.length + 1));
+  // Guard: if a previous bug stored "[object Object]", clear and return null
+  if (raw === '[object Object]' || raw === 'undefined') { mwRemoveCookie(name); return null; }
+  try { return JSON.parse(raw); } catch { return raw; }
+}
+function mwRemoveCookie(name) {
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
+}
+
 // App configuration
 const APP_CONFIG = {
   // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
   enableFollowerInfo: true,
   clientId: 'b84sr9z49lc7sz62bo23voxvj2x0bw',
+  version: 'v1.1',
+  // Explicit redirect URI — must match exactly what is registered in dev.twitch.tv.
+  // Set to null to use window.location.origin + pathname automatically (local dev).
+  redirectUri: 'https://www.bjsolutions.no/FortuneWheel5000',
   donate: {
     enabled: true,
     url: 'https://paypal.me/borgej',
@@ -434,12 +458,15 @@ class TwitchGiveawayApp {
       connectBtn: document.getElementById('connectBtn'),
       disconnectBtn: document.getElementById('disconnectBtn'),
       lockBtn: null,
+      debugToggleBtn: document.getElementById('debugToggleBtn'),
+      debugPanel: document.getElementById('debugPanel'),
       debugAddBtn: document.getElementById('debugAddBtn'),
       connectionStatus: document.getElementById('connectionStatus'),
       wheelElement: document.getElementById('wheelElement'),
       spinBtn: document.getElementById('spinBtn'),
   clearBtn: document.getElementById('clearBtn'),
   removeNonFollowersBtn: document.getElementById('removeNonFollowersBtn'),
+      removeNonSubscribersBtn: document.getElementById('removeNonSubscribersBtn'),
   greenScreenBtn: document.getElementById('greenScreenBtn'),
       wheelSizeBtn: document.getElementById('wheelSizeBtn'),
       participantsList: document.getElementById('participantsList'),
@@ -479,6 +506,9 @@ class TwitchGiveawayApp {
     this.restoreFromStorage();
     this.applyUrlParams();
     this.checkForToken();
+    this.updateConnectionPanelForAuth();
+    const vEl = document.getElementById('appVersion');
+    if (vEl && APP_CONFIG.version) vEl.textContent = APP_CONFIG.version;
 
     if (!APP_CONFIG.enableFollowerInfo && this.elements && this.elements.authBtn) {
       this.elements.authBtn.style.display = 'none';
@@ -497,20 +527,18 @@ class TwitchGiveawayApp {
           if (APP_CONFIG.donate.label) label.textContent = APP_CONFIG.donate.label;
           // Allow user to hide the donate box manually and remember preference
           const closeBtn = document.getElementById('donateClose');
-          const hiddenPref = localStorage.getItem('mw.donateHidden') === '1';
+          const hiddenPref = mwGetCookie('mw.donateHidden') === '1' || localStorage.getItem('mw.donateHidden') === '1';
           if (hiddenPref) { row.style.display = 'none'; }
           if (closeBtn) {
             closeBtn.addEventListener('click', () => {
               row.style.display = 'none';
-              localStorage.setItem('mw.donateHidden', '1');
+              mwSetCookie('mw.donateHidden', '1', 365);
+              try { localStorage.removeItem('mw.donateHidden'); } catch {}
             });
           }
         }
       }
       const addBtn = document.getElementById('debugAddBtn');
-      if (addBtn && APP_CONFIG.ui && APP_CONFIG.ui.showAddTestParticipants === false) {
-        addBtn.style.display = 'none';
-      }
     } catch {}
     const ch = document.getElementById('clearHistoryBtn');
     if (ch) ch.addEventListener('click', async () => {
@@ -550,15 +578,24 @@ class TwitchGiveawayApp {
     this.elements.disconnectBtn.addEventListener('click', () => this.disconnectFromChat());
     this.elements.connectionStatus.classList.add('clickable');
     this.elements.connectionStatus.addEventListener('click', () => { this.toggleConnectionPanel(); });
+    if (this.elements.debugToggleBtn) {
+      this.elements.debugToggleBtn.addEventListener('click', () => {
+        const panel = this.elements.debugPanel;
+        const open = !panel.hidden;
+        panel.hidden = open;
+        this.elements.debugToggleBtn.textContent = open ? 'Debug ▾' : 'Debug ▴';
+      });
+    }
     this.elements.debugAddBtn.addEventListener('click', () => this.addDebugParticipants());
     this.elements.spinBtn.addEventListener('click', () => this.spinWheel());
   if (this.elements.clearBtn) this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
   if (this.elements.removeNonFollowersBtn) this.elements.removeNonFollowersBtn.addEventListener('click', () => this.removeNonFollowers());
+  if (this.elements.removeNonSubscribersBtn) this.elements.removeNonSubscribersBtn.addEventListener('click', () => this.removeNonSubscribers());
   if (this.elements.greenScreenBtn) this.elements.greenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
-    this.elements.winnerModal.addEventListener('click', (e) => { if (e.target === this.elements.winnerModal) this.closeWinnerModal(); });
+    this.elements.winnerModal.addEventListener('click', (e) => { /* backdrop click disabled — use buttons to close */ });
     if (this.elements.confirmYes) this.elements.confirmYes.addEventListener('click', ()=> this._resolveConfirm(true));
     if (this.elements.confirmNo) this.elements.confirmNo.addEventListener('click', ()=> this._resolveConfirm(false));
     if (this.elements.confirmModal) this.elements.confirmModal.addEventListener('click', (e)=>{ if (e.target === this.elements.confirmModal) this._resolveConfirm(false); });
@@ -629,9 +666,11 @@ class TwitchGiveawayApp {
   restoreFromStorage() {
     try {
       // Settings
-      const raw = localStorage.getItem('mw.settings');
-      if (raw) {
-        const s = JSON.parse(raw);
+      const rawOrObj = mwGetCookie('mw.settings') || localStorage.getItem('mw.settings');
+      // Migrate from localStorage if present, then clean up
+      if (localStorage.getItem('mw.settings')) { try { localStorage.removeItem('mw.settings'); } catch {} }
+      if (rawOrObj) {
+        const s = typeof rawOrObj === 'string' ? JSON.parse(rawOrObj) : rawOrObj;
         if (s && typeof s === 'object') {
           // clientId is baked into APP_CONFIG — always use that
           this.clientId = APP_CONFIG.clientId || '';
@@ -737,7 +776,8 @@ class TwitchGiveawayApp {
         subscribersOnly: !!this.subscribersOnly,
         showKeyword: !!this.showKeyword,
       };
-      localStorage.setItem('mw.settings', JSON.stringify(settings));
+      mwSetCookie('mw.settings', settings, 365);
+
       // Participants as entries [name, {followData, ts}]
       try { localStorage.setItem('mw.participants', JSON.stringify(Array.from(this.participants.entries()))); } catch {}
       // Excluded winners set
@@ -767,6 +807,7 @@ class TwitchGiveawayApp {
       this.elements.wheelSizeBtn.textContent = isLarge ? '⤡' : '⤢';
     }
     localStorage.setItem('mw.wheelLarge', isLarge ? '1' : '0');
+    mwSetCookie('mw.wheelLarge', isLarge ? '1' : '0', 365);
     // Give browser a frame to apply CSS before resizing canvas
     requestAnimationFrame(() => {
       try { if (this.wheel && this.wheel.resize) this.wheel.resize(); } catch {}
@@ -774,11 +815,21 @@ class TwitchGiveawayApp {
   }
 
   updateConnectionPanelForAuth() {
-    // Hide channel input + Auth button when already authorized — channel is auto-filled
+    const authed = !!this.accessToken;
+    // Hide channel input + Auth button when already authorized
     const channelGroup = document.getElementById('channelInputGroup');
-    if (channelGroup) channelGroup.style.display = this.accessToken ? 'none' : '';
-    if (this.elements.authBtn) this.elements.authBtn.style.display = this.accessToken ? 'none' : '';
-    if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.style.display = this.accessToken ? '' : 'none';
+    if (channelGroup) channelGroup.style.display = authed ? 'none' : '';
+    if (this.elements.authBtn) this.elements.authBtn.style.display = authed ? 'none' : '';
+    if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.style.display = authed ? '' : 'none';
+    // Disable follower/subscriber toggles and dim them when not authorized
+    const followerToggleEl = this.elements.followersOnlyToggle;
+    const subscriberToggleEl = this.elements.subscribersOnlyToggle;
+    const removeNonFollowersBtn = this.elements.removeNonFollowersBtn;
+    const removeNonSubscribersBtn = this.elements.removeNonSubscribersBtn;
+    if (followerToggleEl) { followerToggleEl.disabled = !authed; followerToggleEl.closest('label').style.opacity = authed ? '' : '0.35'; followerToggleEl.closest('label').title = authed ? '' : 'Requires Twitch authorization'; }
+    if (subscriberToggleEl) { subscriberToggleEl.disabled = !authed; subscriberToggleEl.closest('label').style.opacity = authed ? '' : '0.35'; subscriberToggleEl.closest('label').title = authed ? '' : 'Requires Twitch authorization'; }
+    if (removeNonFollowersBtn) removeNonFollowersBtn.style.display = authed ? '' : 'none';
+    if (removeNonSubscribersBtn) removeNonSubscribersBtn.style.display = authed ? '' : 'none';
   }
 
   revokeAuth() {
@@ -791,6 +842,7 @@ class TwitchGiveawayApp {
     if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.style.display = 'none';
     this.setStatus('Signed out. Authorize again to reconnect.', false);
     this.expandConnectionPanel();
+    this.updateConnectionPanelForAuth();
   }
 
   async fetchAuthorizedUser() {
@@ -827,6 +879,17 @@ class TwitchGiveawayApp {
       return;
     }
     try {
+      // Check for OAuth error returned as query param (e.g. redirect_mismatch)
+      const qp = new URLSearchParams(window.location.search);
+      const oauthError = qp.get('error');
+      const oauthDesc = qp.get('error_description');
+      if (oauthError) {
+        history.replaceState(null, document.title, window.location.pathname);
+        const msg = oauthDesc ? oauthDesc.replace(/\+/g, ' ') : oauthError;
+        this.setStatus(`Twitch auth error: ${msg}`, false);
+        this.showToast(`Twitch auth error: ${msg}`, 'error');
+        return;
+      }
       const hash = (window.location.hash || '').replace(/^#/, '');
       if (hash) {
         const params = new URLSearchParams(hash);
@@ -857,7 +920,7 @@ class TwitchGiveawayApp {
     if (!APP_CONFIG.enableFollowerInfo) { this.showToast('Follower authorization is disabled in config.', 'warn'); return; }
     const clientId = APP_CONFIG.clientId || '';
     if (!clientId) { this.showToast('No Twitch Client ID configured in APP_CONFIG.', 'warn'); return; }
-    const redirectUri = window.location.origin;
+    const redirectUri = APP_CONFIG.redirectUri || (window.location.origin + window.location.pathname).replace(/\/index\.html$/i, '');
     const scopes = ['moderator:read:followers', 'channel:read:subscriptions'];
     const state = Math.random().toString(36).slice(2);
     const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
@@ -866,6 +929,7 @@ class TwitchGiveawayApp {
     authUrl.searchParams.set('response_type', 'token');
     authUrl.searchParams.set('scope', scopes.join(' '));
     authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('force_verify', 'true');
     window.location.href = authUrl.toString();
   }
 
@@ -1033,6 +1097,7 @@ class TwitchGiveawayApp {
     if (!this.elements.connectionPanel) return;
     this.elements.connectionPanel.style.display = 'none';
     localStorage.setItem('mw.connCollapsed', '1');
+    mwSetCookie('mw.connCollapsed', '1', 365);
     requestAnimationFrame(() => this.updateHistoryListHeight());
   }
 
@@ -1040,6 +1105,7 @@ class TwitchGiveawayApp {
     if (!this.elements.connectionPanel) return;
     this.elements.connectionPanel.style.display = '';
     localStorage.setItem('mw.connCollapsed', '0');
+    mwSetCookie('mw.connCollapsed', '0', 365);
     requestAnimationFrame(() => this.updateHistoryListHeight());
   }
 
@@ -1051,7 +1117,7 @@ class TwitchGiveawayApp {
   }
 
   autoCollapseConnectionPanel() {
-    const pref = localStorage.getItem('mw.connCollapsed');
+    const pref = mwGetCookie('mw.connCollapsed') ?? localStorage.getItem('mw.connCollapsed');
     if (pref === '0') return;
     this.collapseConnectionPanel();
     requestAnimationFrame(() => this.updateHistoryListHeight());
@@ -1191,7 +1257,18 @@ class TwitchGiveawayApp {
     const ss = String(remaining%60).padStart(2,'0');
     infoEl.textContent = `Entries close in ${mm}:${ss}`;
     const hasSlices = !!(this.wheel);
-    if (overlayEl) { overlayEl.textContent = `${mm}:${ss}`; overlayEl.style.display = (remaining > 0 && hasSlices) ? 'flex' : 'none'; }
+    if (overlayEl) {
+      if (remaining > 0 && hasSlices) {
+        if (this.showKeyword && this.keyword) {
+          overlayEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;line-height:1.2"><span style="font-size:0.48em;opacity:0.8;letter-spacing:1px">${this.escapeHtml(this.keyword)}</span><span>${mm}:${ss}</span></div>`;
+        } else {
+          overlayEl.textContent = `${mm}:${ss}`;
+        }
+        overlayEl.style.display = 'flex';
+      } else {
+        overlayEl.style.display = 'none';
+      }
+    }
     if (emptyCountdown) { emptyCountdown.textContent = `${mm}:${ss}`; emptyCountdown.style.display = (remaining > 0 && !hasSlices) ? 'block' : 'none'; }
     if (remaining <= 0) { this.stopEntries(); }
   }
@@ -1296,6 +1373,29 @@ class TwitchGiveawayApp {
     this.renderWheel();
   }
 
+  removeNonSubscribers() {
+    if (!this.accessToken) {
+      this.showToast('Authorize with Twitch first to verify subscriber status.', 'warn');
+      return;
+    }
+    let removed = 0;
+    for (const [username, data] of this.participants.entries()) {
+      if (!data.isSubscriber) {
+        this.participants.delete(username);
+        if (this.excludedWinners) this.excludedWinners.delete(username.toLowerCase());
+        removed++;
+      }
+    }
+    if (removed === 0) {
+      this.showToast('No confirmed non-subscribers found to remove.', 'info');
+      return;
+    }
+    this.saveToStorage();
+    this.renderParticipants();
+    this.renderWheel();
+    this.showToast(`Removed ${removed} non-subscriber${removed === 1 ? '' : 's'}.`, 'info');
+  }
+
   removeNonFollowers() {
     if (!this.accessToken) {
       this.showToast('Authorize with Twitch first to verify follower status.', 'warn');
@@ -1335,15 +1435,17 @@ class TwitchGiveawayApp {
         const c = this.sliceColorMap.get(username);
         item.style.borderLeftColor = c;
       }
-      const followHtml = APP_CONFIG.enableFollowerInfo ? `
-        <div class="participant-info">
-          <div class="follower-status ${data.followData?.isFollower ? 'yes' : 'no'}">${data.followData?.isFollower ? 'Follower' : 'Not Following'}</div>
-          ${data.isSubscriber ? '<div class="follower-status subscriber">Subscriber</div>' : ''}
-          <div>${data.followData?.followDurationText || ''}</div>
-        </div>` : '';
+      const badges = APP_CONFIG.enableFollowerInfo ? `
+        <div class="participant-badges">
+          <span class="follower-status ${data.followData?.isFollower ? 'yes' : 'no'}">${data.followData?.isFollower ? 'Follower' : 'Not Following'}</span>
+          ${data.isSubscriber ? '<span class="follower-status subscriber">Subscriber</span>' : ''}
+        </div>
+        ${data.followData?.isFollower && data.followData?.followDurationText && data.followData.followDurationText !== 'Unknown' ? `<div class="participant-duration">${data.followData.followDurationText}</div>` : ''}` : '';
       item.innerHTML = `
-        <div class="participant-name">${data.displayName || username}</div>
-        ${followHtml}`;
+        <div class="participant-main">
+          <div class="participant-name">${data.displayName || username}</div>
+          ${badges}
+        </div>`;
       const removeBtn = document.createElement('button');
       removeBtn.className = 'participant-remove';
       removeBtn.textContent = '×';
@@ -1541,7 +1643,7 @@ class TwitchGiveawayApp {
       this.elements.winnerAvatar.style.display = avatarUrl ? 'block' : 'none';
     }
     this.elements.winnerName.textContent = this.participants.get(winner)?.displayName || winner;
-    this.elements.winnerMeta.textContent = (APP_CONFIG.enableFollowerInfo && fd) ? `${fd.isFollower ? 'Follower' : 'Not Following'} • ${fd.followDurationText}` : '';
+    this.elements.winnerMeta.textContent = (APP_CONFIG.enableFollowerInfo && fd) ? (fd.isFollower ? `Follower${fd.followDurationText && fd.followDurationText !== 'Unknown' ? ' • ' + fd.followDurationText : ''}` : 'Not Following') : '';
     this.elements.winnerChat.innerHTML = '';
     this.elements.winnerChat.style.display = 'none';
     if (this.winnerTimerMinutes === 0) {
@@ -1739,3 +1841,54 @@ const app = new TwitchGiveawayApp();
   new ResizeObserver(sync).observe(leftbar);
   sync();
 })();
+
+// ---------------------------------------------------------------------------
+// Cookie consent management
+// ---------------------------------------------------------------------------
+(function initConsent() {
+  function applyConsent(consent) {
+    mwSetCookie('mw.consent', consent, 365);
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: consent.analytics ? 'granted' : 'denied' });
+    }
+  }
+
+  const banner = document.getElementById('consentBanner');
+  const analyticsCheckbox = document.getElementById('consentAnalytics');
+  if (!banner) return;
+
+  const stored = mwGetCookie('mw.consent');
+  if (!stored || !stored.decided) {
+    // First visit — show banner with analytics checked by default
+    if (analyticsCheckbox) analyticsCheckbox.checked = true;
+    banner.style.display = 'flex';
+  } else {
+    // Restore checkbox state for when settings are re-opened
+    if (analyticsCheckbox) analyticsCheckbox.checked = !!stored.analytics;
+  }
+
+  document.getElementById('consentAcceptAll')?.addEventListener('click', () => {
+    if (analyticsCheckbox) analyticsCheckbox.checked = true;
+    applyConsent({ analytics: true, decided: true });
+    banner.style.display = 'none';
+  });
+  document.getElementById('consentSaveChoices')?.addEventListener('click', () => {
+    applyConsent({ analytics: !!analyticsCheckbox?.checked, decided: true });
+    banner.style.display = 'none';
+  });
+  document.getElementById('consentRejectAll')?.addEventListener('click', () => {
+    if (analyticsCheckbox) analyticsCheckbox.checked = false;
+    applyConsent({ analytics: false, decided: true });
+    banner.style.display = 'none';
+  });
+
+  // "Cookie settings" link reopens the banner
+  document.getElementById('cookieSettingsLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (analyticsCheckbox && stored) analyticsCheckbox.checked = !!stored.analytics;
+    banner.style.display = 'flex';
+  });
+  // Close banner on backdrop click
+  banner.addEventListener('click', (e) => { if (e.target === banner) banner.style.display = 'none'; });
+})();
+

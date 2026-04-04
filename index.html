@@ -4,21 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FortuneWheel5000</title>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FTBB0WTW3N"></script>
+  <!-- Google Analytics — consent mode: denied by default until user accepts -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', { analytics_storage: 'denied' });
+    // Apply stored consent immediately so GA fires correctly if already accepted
+    (function() {
+      try {
+        var m = document.cookie.split('; ').find(function(r){ return r.startsWith('mw.consent='); });
+        if (m) {
+          var v = JSON.parse(decodeURIComponent(m.slice('mw.consent='.length)));
+          if (v && v.analytics) gtag('consent', 'update', { analytics_storage: 'granted' });
+        }
+      } catch(e) {}
+    })();
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FTBB0WTW3N"></script>
+  <script>
     gtag('js', new Date());
     gtag('config', 'G-FTBB0WTW3N');
   </script>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=1.1" />
 </head>
 <body>
   <div class="container">
     <div class="leftbar">
       <div class="stream-title" id="streamTitle">FortuneWheel5000</div>
-      <div class="stream-subtitle">made with <span class="heart" role="img" aria-label="love">❤️</span> by <a href="http://www.twitch.tv/beejeey" target="_blank" rel="noopener noreferrer">BeeJeey</a></div>
+      <div class="stream-subtitle">made with <span class="heart" role="img" aria-label="love">❤️</span> by <a href="http://www.twitch.tv/beejeey" target="_blank" rel="noopener noreferrer">BeeJeey</a> &middot; <a href="#" id="cookieSettingsLink" class="cookie-settings-link">Cookie settings</a> &middot; <span id="appVersion"></span></div>
       <div class="donate-row" id="donateRow">
         <div class="donate-group">
           <button class="donate-close" id="donateClose" aria-label="Hide donation" title="Hide this box">×</button>
@@ -67,28 +80,32 @@
           </div>
           <div class="toggle-group" style="grid-column: 1 / -1;">
             <label class="toggle" title="Show confetti when someone wins">
-              <input id="confettiToggle" type="checkbox" checked /> Confetti on win
+              <input id="confettiToggle" type="checkbox" checked /> <span class="toggle-icon">🎉</span> Confetti on win
             </label>
             <label class="toggle" title="Show sad faces when the winner times out">
-              <input id="sadToggle" type="checkbox" checked /> Sad faces on timeout
+              <input id="sadToggle" type="checkbox" checked /> <span class="toggle-icon">😢</span> Sad faces on timeout
             </label>
             <label class="toggle" title="Play tick sounds while spinning">
-              <input id="tickToggle" type="checkbox" checked /> Tick sounds
-            </label>
-            <!-- spin duration and easing are now configured via APP_CONFIG.defaults -->
-            <label class="toggle" title="Only let followers join — requires Twitch authorization">
-              <input id="followersOnlyToggle" type="checkbox" /> Followers only
-            </label>
-            <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
-              <input id="subscribersOnlyToggle" type="checkbox" /> Subscribers only
+              <input id="tickToggle" type="checkbox" checked /> <span class="toggle-icon">🔊</span> Tick sounds
             </label>
             <label class="toggle" title="Show the giveaway keyword in the centre of the wheel while entries are open">
-              <input id="showKeywordToggle" type="checkbox" checked /> Show keyword
+              <input id="showKeywordToggle" type="checkbox" checked /> <span class="toggle-icon">🔑</span> Show keyword
+            </label>
+            <label class="toggle" title="Only let followers join — requires Twitch authorization">
+              <input id="followersOnlyToggle" type="checkbox" /> <span class="toggle-icon">&#x1F49C;</span> Followers only
+            </label>
+            <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
+              <input id="subscribersOnlyToggle" type="checkbox" /> <span class="toggle-icon">⭐</span> Subscribers only
             </label>
           </div>
           <div class="toolbar" style="grid-column: 1 / -1;">
-            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
-            <button id="debugAddBtn" class="btn-secondary" title="Add 10–30 random test participants (debug)">Add Test Participants</button>
+            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)" style="grid-column: 1 / -1;">Start Giveaway</button>
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <button id="debugToggleBtn" class="btn-debug-toggle" title="Show/hide debug options">Debug ▾</button>
+            <div id="debugPanel" class="debug-panel" hidden>
+              <button id="debugAddBtn" class="btn-secondary" title="Add 10–100 random test participants">Add Test Participants</button>
+            </div>
           </div>
         </div>
       </div>
@@ -122,6 +139,7 @@
         <div class="participants-header">
           <div class="participants-actions">
             <button id="removeNonFollowersBtn" class="btn-secondary" title="Remove confirmed non-followers from the list">Remove non-followers</button>
+            <button id="removeNonSubscribersBtn" class="btn-secondary" title="Remove non-subscribers from the list">Remove non-subs</button>
             <button id="clearBtn" class="btn-danger" title="Remove everyone from the current list">Clear</button>
           </div>
         </div>
@@ -171,6 +189,35 @@
     </div>
   </div>
 
-  <script src="./app.js"></script>
+  <!-- Cookie consent banner -->
+  <div id="consentBanner" class="consent-banner" style="display:none" role="dialog" aria-labelledby="consentTitle" aria-modal="true">
+    <div class="consent-box">
+      <h3 id="consentTitle">Cookie &amp; Storage Notice</h3>
+      <p class="consent-intro">This app uses browser storage to save your settings, and optionally Google Analytics to help the developer understand usage.</p>
+      <div class="consent-categories">
+        <div class="consent-category">
+          <div class="consent-cat-header">
+            <strong>Functional storage</strong>
+            <span class="consent-required">Always on</span>
+          </div>
+          <p>Saves your settings (keyword, timers, toggles), UI preferences and giveaway history locally in your browser using cookies and <code>localStorage</code>. This data never leaves your device.</p>
+        </div>
+        <label class="consent-category consent-category-toggle">
+          <div class="consent-cat-header">
+            <strong>Analytics &mdash; Google Analytics</strong>
+            <input type="checkbox" id="consentAnalytics" />
+          </div>
+          <p>Helps the developer understand how many people use the app (page views, session counts). No personal data, chat content or participant names are ever collected.</p>
+        </label>
+      </div>
+      <div class="consent-actions">
+        <button id="consentRejectAll" class="btn-secondary">Only necessary</button>
+        <button id="consentSaveChoices" class="btn-secondary">Save choices</button>
+        <button id="consentAcceptAll" class="btn-primary">Accept all</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js?v=v1.1"></script>
 </body>
 </html>
