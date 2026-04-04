@@ -100,7 +100,11 @@
             </label>
           </div>
           <div class="toolbar" style="grid-column: 1 / -1;">
-            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)" style="grid-column: 1 / -1;">Start Giveaway</button>
+            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
+            <button id="clearGiveawayBtn" class="btn-secondary" title="Clear all participants and reset the wheel">Clear</button>
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <button id="paletteBtn" class="btn-palette-toggle" title="Change the wheel colour palette">&#x1F3A8; Wheel palette</button>
           </div>
           <div style="grid-column: 1 / -1;">
             <button id="debugToggleBtn" class="btn-debug-toggle" title="Show/hide debug options">Debug ▾</button>
@@ -187,6 +191,16 @@
         <button id="confirmYes" class="btn-danger">Yes</button>
         <button id="confirmNo" class="btn-secondary">No</button>
       </div>
+    </div>
+  </div>
+
+  <div id="paletteModal" class="palette-modal" style="display:none">
+    <div class="palette-modal-card">
+      <div class="palette-modal-header">
+        <h3>&#x1F3A8; Wheel Palette</h3>
+        <button id="closePaletteBtn" class="palette-close-btn" title="Close">&#x2715;</button>
+      </div>
+      <div id="paletteGrid" class="palette-grid"></div>
     </div>
   </div>
 

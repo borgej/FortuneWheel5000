@@ -162,9 +162,27 @@ body.is-spinning .wheel-pointer {
 .leftbar .toolbar button { padding: 10px 12px; font-size: 14px; width: 100%; height: 100%; }
 .btn-debug-toggle { background: none; border: 1px dashed #4a5568; color: #718096; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-top: 4px; }
 .btn-debug-toggle:hover { border-color: #718096; color: #a0aec0; }
+.btn-palette-toggle { background: none; border: 1px solid rgba(148,163,184,0.2); color: #94a3b8; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 2px; }
+.btn-palette-toggle:hover { border-color: rgba(148,163,184,0.4); color: #cbd5e1; background: rgba(30,41,59,0.4); }
 .debug-panel { margin-top: 6px; padding: 8px; background: #1a1f2e; border: 1px dashed #4a5568; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
 .debug-panel[hidden] { display: none; }
 .debug-panel button { font-size: 12px; padding: 6px 10px; }
+
+/* Palette picker modal */
+.palette-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(2,6,12,0.78); z-index: 2002; backdrop-filter: blur(4px); }
+.palette-modal-card { background: linear-gradient(135deg, #0b1220, #111827); border: 1px solid rgba(148,163,184,0.2); border-radius: 16px; padding: 20px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+.palette-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.palette-modal-header h3 { font-size: 15px; font-weight: 800; color: #e2e8f0; }
+.palette-close-btn { background: none; border: 1px solid rgba(148,163,184,0.25); color: #94a3b8; width: 28px; height: 28px; padding: 0; border-radius: 8px; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.palette-close-btn:hover { color: #e2e8f0; border-color: rgba(148,163,184,0.5); }
+.palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.palette-card { background: rgba(30,41,59,0.55); border: 2px solid rgba(148,163,184,0.15); border-radius: 10px; padding: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.palette-card:hover { background: rgba(30,41,59,0.9); border-color: rgba(148,163,184,0.4); }
+.palette-card.active { border-color: #4f46e5; background: rgba(79,70,229,0.12); pointer-events: none; }
+.palette-swatches { display: flex; gap: 3px; margin-bottom: 6px; }
+.palette-swatch { flex: 1; height: 18px; border-radius: 3px; }
+.palette-name { font-size: 11px; font-weight: 700; color: #94a3b8; text-align: center; }
+.palette-card.active .palette-name { color: #a5b4fc; }
 
 .cookie-settings-link { font-weight: 600 !important; opacity: 0.7; }
 .cookie-settings-link:hover { opacity: 1; }

@@ -48,7 +48,7 @@ if defined VERSION (
     echo   Patched version to %VERSION%
 )
 
-set FILES=index.html app.js styles.css tmi.min.js web.config
+set FILES=index.html app.js styles.css tmi.min.js web.config favicon.svg
 
 for %%f in (%FILES%) do (
     copy /Y "%%f" "%DEST%\%%f" >nul
@@ -63,4 +63,3 @@ for %%f in (%FILES%) do (
 echo.
 echo Done! App published to %DEST%
 if defined VERSION echo Version: %VERSION%
-pause
