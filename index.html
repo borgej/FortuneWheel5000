@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FortuneWheel5000</title>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FTBB0WTW3N"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FTBB0WTW3N');
+  </script>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -25,21 +33,15 @@
       </div>
       <div class="card">
         <div id="connectionPanel" class="connection-panel">
-          <div class="input-group">
-            <label for="clientId">Twitch Client ID</label>
-            <input id="clientId" type="text" placeholder="Enter Twitch Client ID" />
-          </div>
-          <div class="input-group">
+          <div class="input-group" id="channelInputGroup">
             <label for="channelName">Channel Name</label>
             <input id="channelName" type="text" placeholder="yourchannel" />
           </div>
           <div class="toolbar">
+            <button id="authBtn" class="btn-primary">Authorize with Twitch</button>
             <button id="connectBtn" class="btn-primary">Connect</button>
-            <button id="authBtn" class="btn-primary">Authorize</button>
             <button id="disconnectBtn" class="btn-secondary" style="display:none">Disconnect</button>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;margin-left:auto">
-              <input id="hideSensitive" type="checkbox" /> Hide Client ID
-            </label>
+            <button id="revokeAuthBtn" class="btn-secondary" style="display:none">Sign out</button>
           </div>
         </div>
         <div id="connectionStatus" class="status disconnected">Enter Client ID and authorize with Twitch</div>
@@ -63,11 +65,6 @@
             <label for="winnerTimerMinutes">Winner Timer (minutes) — 0 for unlimited</label>
             <input id="winnerTimerMinutes" type="number" min="0" step="1" placeholder="2" />
           </div>
-          <div class="toolbar" style="grid-column: 1 / -1; margin-bottom:8px;">
-            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
-            <button id="lockBtn" class="btn-secondary" title="Toggle accepting entries">Lock Entries</button>
-            <button id="debugAddBtn" class="btn-secondary" title="Add 10–30 random test participants (debug)">Add Test Participants</button>
-          </div>
           <div class="toggle-group" style="grid-column: 1 / -1;">
             <label class="toggle" title="Show confetti when someone wins">
               <input id="confettiToggle" type="checkbox" checked /> Confetti on win
@@ -79,17 +76,23 @@
               <input id="tickToggle" type="checkbox" checked /> Tick sounds
             </label>
             <!-- spin duration and easing are now configured via APP_CONFIG.defaults -->
+            <label class="toggle" title="Only let followers join — requires Twitch authorization">
+              <input id="followersOnlyToggle" type="checkbox" /> Followers only
+            </label>
+            <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
+              <input id="subscribersOnlyToggle" type="checkbox" /> Subscribers only
+            </label>
+            <label class="toggle" title="Show the giveaway keyword in the centre of the wheel while entries are open">
+              <input id="showKeywordToggle" type="checkbox" checked /> Show keyword
+            </label>
+          </div>
+          <div class="toolbar" style="grid-column: 1 / -1;">
+            <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
+            <button id="debugAddBtn" class="btn-secondary" title="Add 10–30 random test participants (debug)">Add Test Participants</button>
           </div>
         </div>
       </div>
 
-      <div class="card" id="historyCard">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <h3 style="margin:0">Giveaway History</h3>
-          <button id="clearHistoryBtn" class="btn-secondary" style="padding:6px 10px;font-size:12px">Clear</button>
-        </div>
-        <div id="historyList"></div>
-      </div>
     </div>
 
     <div class="card wheel-container">
@@ -110,12 +113,28 @@
     </div>
 
     <div class="sidebar">
-      <div class="participants-list">
-        <h3>Participants (<span id="participantCount">0</span>)</h3>
-        <div class="participants-actions">
-          <button id="clearBtn" class="btn-danger" title="Remove everyone from the current list">Clear</button>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="participants">Participants (<span id="participantCount">0</span>)</button>
+        <button class="sidebar-tab" data-tab="history">History</button>
+      </div>
+
+      <div class="sidebar-panel" id="tabParticipants">
+        <div class="participants-header">
+          <div class="participants-actions">
+            <button id="removeNonFollowersBtn" class="btn-secondary" title="Remove confirmed non-followers from the list">Remove non-followers</button>
+            <button id="clearBtn" class="btn-danger" title="Remove everyone from the current list">Clear</button>
+          </div>
         </div>
         <div id="participantsList"></div>
+      </div>
+
+      <div class="sidebar-panel" id="tabHistory" style="display:none">
+        <div class="participants-header">
+          <div class="participants-actions">
+            <button id="clearHistoryBtn" class="btn-secondary" title="Clear all history">Clear</button>
+          </div>
+        </div>
+        <div id="historyList"></div>
       </div>
     </div>
   </div>
@@ -123,6 +142,7 @@
   <div id="winnerModal" class="winner-announcement">
     <div class="winner-card">
       <h2>Winner</h2>
+      <img id="winnerAvatar" class="winner-avatar" src="" alt="" style="display:none" />
       <div id="winnerName" class="winner-name"></div>
       <div id="winnerMeta" style="margin-bottom:12px;font-weight:600"></div>
       <div id="winnerTimer" style="font-weight:800;margin-bottom:8px">00:00</div>

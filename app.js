@@ -18,8 +18,9 @@
 
 // App configuration
 const APP_CONFIG = {
-  // Not finished yet, do not turn on 
-  enableFollowerInfo: false,
+  // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
+  enableFollowerInfo: true,
+  clientId: 'b84sr9z49lc7sz62bo23voxvj2x0bw',
   donate: {
     enabled: true,
     url: 'https://paypal.me/borgej',
@@ -403,6 +404,9 @@ class TwitchGiveawayApp {
     this.entryStartTime = 0;
     this.entryTotalSeconds = 0;
     this.excludedWinners = new Set();
+    this.followersOnly = false;
+    this.subscribersOnly = false;
+    this.showKeyword = true;
   // Spin behavior
   this.spinDurationSeconds = APP_CONFIG?.defaults?.spinDurationSeconds ?? 5;
   this.spinSmoothEasing = APP_CONFIG?.defaults?.spinSmoothEasing ?? true;
@@ -420,26 +424,29 @@ class TwitchGiveawayApp {
 
     this.elements = {
       connectionPanel: document.getElementById('connectionPanel'),
-      clientIdInput: document.getElementById('clientId'),
+      clientIdInput: null,
       channelInput: document.getElementById('channelName'),
       keywordPrefixInput: document.getElementById('keywordPrefix'),
       keywordInput: document.getElementById('keyword'),
       winnerTimerMinutesInput: document.getElementById('winnerTimerMinutes'),
+      revokeAuthBtn: document.getElementById('revokeAuthBtn'),
       authBtn: document.getElementById('authBtn'),
       connectBtn: document.getElementById('connectBtn'),
       disconnectBtn: document.getElementById('disconnectBtn'),
-      lockBtn: document.getElementById('lockBtn'),
+      lockBtn: null,
       debugAddBtn: document.getElementById('debugAddBtn'),
       connectionStatus: document.getElementById('connectionStatus'),
       wheelElement: document.getElementById('wheelElement'),
       spinBtn: document.getElementById('spinBtn'),
   clearBtn: document.getElementById('clearBtn'),
+  removeNonFollowersBtn: document.getElementById('removeNonFollowersBtn'),
   greenScreenBtn: document.getElementById('greenScreenBtn'),
       wheelSizeBtn: document.getElementById('wheelSizeBtn'),
       participantsList: document.getElementById('participantsList'),
       participantCount: document.getElementById('participantCount'),
       historyList: document.getElementById('historyList'),
       winnerModal: document.getElementById('winnerModal'),
+      winnerAvatar: document.getElementById('winnerAvatar'),
       winnerName: document.getElementById('winnerName'),
       winnerMeta: document.getElementById('winnerMeta'),
       winnerTimer: document.getElementById('winnerTimer'),
@@ -450,12 +457,15 @@ class TwitchGiveawayApp {
       confettiToggle: document.getElementById('confettiToggle'),
       sadToggle: document.getElementById('sadToggle'),
       tickToggle: document.getElementById('tickToggle'),
+      followersOnlyToggle: document.getElementById('followersOnlyToggle'),
+      subscribersOnlyToggle: document.getElementById('subscribersOnlyToggle'),
+      showKeywordToggle: document.getElementById('showKeywordToggle'),
       startGiveawayBtn: document.getElementById('startGiveawayBtn'),
       entryTimerMinutesInput: document.getElementById('entryTimerMinutes'),
   // spin controls removed from UI; config via APP_CONFIG
       entryInfo: document.getElementById('entryInfo'),
       entryOverlay: document.getElementById('entryOverlay'),
-      hideSensitive: document.getElementById('hideSensitive'),
+      hideSensitive: null,
       toastContainer: document.getElementById('toastContainer'),
       confirmModal: document.getElementById('confirmModal'),
       confirmTitle: document.getElementById('confirmTitle'),
@@ -473,14 +483,6 @@ class TwitchGiveawayApp {
     if (!APP_CONFIG.enableFollowerInfo && this.elements && this.elements.authBtn) {
       this.elements.authBtn.style.display = 'none';
       this.setStatus('Connect to chat (follower info disabled)', false);
-      if (this.elements.clientIdInput) {
-        const cidGroup = this.elements.clientIdInput.closest('.input-group');
-        if (cidGroup) cidGroup.style.display = 'none';
-      }
-      if (this.elements.hideSensitive) {
-        const hsLabel = this.elements.hideSensitive.closest('label');
-        if (hsLabel) hsLabel.style.display = 'none';
-      }
     }
 
     try {
@@ -522,18 +524,20 @@ class TwitchGiveawayApp {
     });
 
     this.render();
-    // Keep history list sized correctly on window resizes
-    window.addEventListener('resize', () => this.updateHistoryListHeight());
   }
 
   bindEvents() {
-    // Keep clientId and channel synced with state + storage
-    if (this.elements.clientIdInput) {
-      this.elements.clientIdInput.addEventListener('input', (e) => {
-        this.clientId = (e.target.value || '').trim();
-        this.saveToStorage();
+    // Sidebar tab switching
+    document.querySelectorAll('.sidebar-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sidebar-panel').forEach(p => p.style.display = 'none');
+        btn.classList.add('active');
+        const panel = document.getElementById('tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1));
+        if (panel) panel.style.display = '';
       });
-    }
+    });
+    // Keep channel synced with state + storage
     if (this.elements.channelInput) {
       this.elements.channelInput.addEventListener('input', (e) => {
         this.channelName = (e.target.value || '').trim().toLowerCase();
@@ -541,14 +545,15 @@ class TwitchGiveawayApp {
       });
     }
     this.elements.authBtn.addEventListener('click', () => this.authorizeWithTwitch());
+    if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.addEventListener('click', () => this.revokeAuth());
     this.elements.connectBtn.addEventListener('click', () => this.connectToChat());
     this.elements.disconnectBtn.addEventListener('click', () => this.disconnectFromChat());
     this.elements.connectionStatus.classList.add('clickable');
     this.elements.connectionStatus.addEventListener('click', () => { this.toggleConnectionPanel(); });
-    this.elements.lockBtn.addEventListener('click', () => this.toggleEntries());
     this.elements.debugAddBtn.addEventListener('click', () => this.addDebugParticipants());
     this.elements.spinBtn.addEventListener('click', () => this.spinWheel());
   if (this.elements.clearBtn) this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
+  if (this.elements.removeNonFollowersBtn) this.elements.removeNonFollowersBtn.addEventListener('click', () => this.removeNonFollowers());
   if (this.elements.greenScreenBtn) this.elements.greenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
@@ -558,7 +563,6 @@ class TwitchGiveawayApp {
     if (this.elements.confirmNo) this.elements.confirmNo.addEventListener('click', ()=> this._resolveConfirm(false));
     if (this.elements.confirmModal) this.elements.confirmModal.addEventListener('click', (e)=>{ if (e.target === this.elements.confirmModal) this._resolveConfirm(false); });
     this.elements.startGiveawayBtn.addEventListener('click', () => this.toggleGiveaway());
-    this.elements.hideSensitive.addEventListener('change', () => this.applyHideSensitive());
     this.elements.confettiToggle.addEventListener('change', () => {
       this.enableConfetti = !!this.elements.confettiToggle.checked;
       this.saveToStorage();
@@ -571,6 +575,31 @@ class TwitchGiveawayApp {
       this.enableTick = !!this.elements.tickToggle.checked;
       this.saveToStorage();
     });
+    if (this.elements.followersOnlyToggle) {
+      this.elements.followersOnlyToggle.addEventListener('change', () => {
+        this.followersOnly = !!this.elements.followersOnlyToggle.checked;
+        if (this.followersOnly && !this.accessToken) {
+          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a follower and entries will be blocked.', 'warn');
+        }
+        this.saveToStorage();
+      });
+    }
+    if (this.elements.subscribersOnlyToggle) {
+      this.elements.subscribersOnlyToggle.addEventListener('change', () => {
+        this.subscribersOnly = !!this.elements.subscribersOnlyToggle.checked;
+        if (this.subscribersOnly && !this.accessToken) {
+          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a subscriber and entries will be blocked.', 'warn');
+        }
+        this.saveToStorage();
+      });
+    }
+    if (this.elements.showKeywordToggle) {
+      this.elements.showKeywordToggle.addEventListener('change', () => {
+        this.showKeyword = !!this.elements.showKeywordToggle.checked;
+        this.saveToStorage();
+        this.updateEntryInfo();
+      });
+    }
 
     this.elements.keywordPrefixInput.addEventListener('input', (e) => {
       this.keywordPrefix = (e.target.value || '').trim();
@@ -604,10 +633,8 @@ class TwitchGiveawayApp {
       if (raw) {
         const s = JSON.parse(raw);
         if (s && typeof s === 'object') {
-          if (this.elements.clientIdInput && typeof s.clientId === 'string') {
-            this.elements.clientIdInput.value = s.clientId;
-            this.clientId = (s.clientId || '').trim();
-          }
+          // clientId is baked into APP_CONFIG — always use that
+          this.clientId = APP_CONFIG.clientId || '';
           if (this.elements.channelInput && typeof s.channelName === 'string') {
             this.elements.channelInput.value = s.channelName;
             this.channelName = (s.channelName || '').trim().toLowerCase();
@@ -636,10 +663,9 @@ class TwitchGiveawayApp {
           if (typeof s.enableConfetti === 'boolean') { this.enableConfetti = s.enableConfetti; if (this.elements.confettiToggle) this.elements.confettiToggle.checked = s.enableConfetti; }
           if (typeof s.enableSad === 'boolean') { this.enableSad = s.enableSad; if (this.elements.sadToggle) this.elements.sadToggle.checked = s.enableSad; }
           if (typeof s.enableTick === 'boolean') { this.enableTick = s.enableTick; if (this.elements.tickToggle) this.elements.tickToggle.checked = s.enableTick; }
-          if (typeof s.hideSensitive === 'boolean' && this.elements.hideSensitive) {
-            this.elements.hideSensitive.checked = s.hideSensitive;
-            this.applyHideSensitive();
-          }
+          if (typeof s.followersOnly === 'boolean') { this.followersOnly = s.followersOnly; if (this.elements.followersOnlyToggle) this.elements.followersOnlyToggle.checked = s.followersOnly; }
+          if (typeof s.subscribersOnly === 'boolean') { this.subscribersOnly = s.subscribersOnly; if (this.elements.subscribersOnlyToggle) this.elements.subscribersOnlyToggle.checked = s.subscribersOnly; }
+          if (typeof s.showKeyword === 'boolean') { this.showKeyword = s.showKeyword; if (this.elements.showKeywordToggle) this.elements.showKeywordToggle.checked = s.showKeyword; }
           if (typeof s.greenScreen === 'boolean') {
             document.body.classList.toggle('greenscreen', !!s.greenScreen);
           }
@@ -653,6 +679,7 @@ class TwitchGiveawayApp {
           this.keywordPrefix = (this.elements.keywordPrefixInput?.value || '').trim();
           this.keywordText = (this.elements.keywordInput?.value || '').trim();
           this.keyword = ((this.keywordPrefix || '') + (this.keywordText || '')).trim();
+          this.clientId = APP_CONFIG.clientId || '';
           if (this.elements.channelInput && d.channelName) {
             this.elements.channelInput.value = d.channelName;
             this.channelName = (d.channelName || '').trim().toLowerCase();
@@ -694,7 +721,7 @@ class TwitchGiveawayApp {
   saveToStorage() {
     try {
       const settings = {
-        clientId: (this.elements.clientIdInput?.value || '').trim(),
+        clientId: APP_CONFIG.clientId || '',
         channelName: (this.elements.channelInput?.value || '').trim().toLowerCase(),
         keywordPrefix: (this.elements.keywordPrefixInput?.value || '').trim(),
         keywordText: (this.elements.keywordInput?.value || '').trim(),
@@ -705,8 +732,10 @@ class TwitchGiveawayApp {
         enableConfetti: !!this.enableConfetti,
         enableSad: !!this.enableSad,
         enableTick: !!this.enableTick,
-        hideSensitive: !!this.elements.hideSensitive?.checked,
-  greenScreen: document.body.classList.contains('greenscreen'),
+        greenScreen: document.body.classList.contains('greenscreen'),
+        followersOnly: !!this.followersOnly,
+        subscribersOnly: !!this.subscribersOnly,
+        showKeyword: !!this.showKeyword,
       };
       localStorage.setItem('mw.settings', JSON.stringify(settings));
       // Participants as entries [name, {followData, ts}]
@@ -744,6 +773,54 @@ class TwitchGiveawayApp {
     });
   }
 
+  updateConnectionPanelForAuth() {
+    // Hide channel input + Auth button when already authorized — channel is auto-filled
+    const channelGroup = document.getElementById('channelInputGroup');
+    if (channelGroup) channelGroup.style.display = this.accessToken ? 'none' : '';
+    if (this.elements.authBtn) this.elements.authBtn.style.display = this.accessToken ? 'none' : '';
+    if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.style.display = this.accessToken ? '' : 'none';
+  }
+
+  revokeAuth() {
+    this.accessToken = null;
+    sessionStorage.removeItem('mw.accessToken');
+    this.disconnectFromChat();
+    const channelGroup = document.getElementById('channelInputGroup');
+    if (channelGroup) channelGroup.style.display = '';
+    if (this.elements.authBtn) this.elements.authBtn.style.display = '';
+    if (this.elements.revokeAuthBtn) this.elements.revokeAuthBtn.style.display = 'none';
+    this.setStatus('Signed out. Authorize again to reconnect.', false);
+    this.expandConnectionPanel();
+  }
+
+  async fetchAuthorizedUser() {
+    if (!this.accessToken || !this.clientId) return;
+    try {
+      const resp = await fetch('https://api.twitch.tv/helix/users', {
+        headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
+      });
+      const data = await resp.json();
+      const user = data?.data?.[0];
+      if (!user) return;
+      // Only auto-fill if the channel field is still empty or has the config default
+      const currentVal = (this.elements.channelInput?.value || '').trim().toLowerCase();
+      const configDefault = (APP_CONFIG?.defaults?.channelName || '').toLowerCase();
+      if (!currentVal || currentVal === configDefault) {
+        const login = (user.login || '').toLowerCase();
+        if (this.elements.channelInput) this.elements.channelInput.value = login;
+        this.channelName = login;
+        this.saveToStorage();
+        this.setStatus(`Authorized as ${user.display_name || login} — connecting...`, true);
+      }
+      // Auto-connect to chat after authorization
+      if (!this.isConnected) {
+        setTimeout(() => this.connectToChat(), 100);
+      }
+    } catch (e) {
+      console.warn('fetchAuthorizedUser failed', e);
+    }
+  }
+
   checkForToken() {
     if (!APP_CONFIG.enableFollowerInfo) {
       this.setStatus('Follower info disabled. You can still connect to chat.', false);
@@ -759,6 +836,8 @@ class TwitchGiveawayApp {
           sessionStorage.setItem('mw.accessToken', tok);
           history.replaceState(null, document.title, window.location.pathname + window.location.search);
           this.setStatus('Authorized with Twitch • follower info enabled', true);
+          this.updateConnectionPanelForAuth();
+          this.fetchAuthorizedUser();
           return;
         }
       }
@@ -766,6 +845,8 @@ class TwitchGiveawayApp {
       if (saved) {
         this.accessToken = saved;
         this.setStatus('Authorized with Twitch • follower info enabled', true);
+        this.updateConnectionPanelForAuth();
+        this.fetchAuthorizedUser();
         return;
       }
     } catch {}
@@ -774,10 +855,10 @@ class TwitchGiveawayApp {
 
   authorizeWithTwitch() {
     if (!APP_CONFIG.enableFollowerInfo) { this.showToast('Follower authorization is disabled in config.', 'warn'); return; }
-    const clientId = (this.elements.clientIdInput.value || '').trim();
-    if (!clientId) { this.showToast('Enter your Twitch Client ID first', 'warn'); return; }
-    const redirectUri = window.location.origin + window.location.pathname;
-    const scopes = ['moderator:read:followers'];
+    const clientId = APP_CONFIG.clientId || '';
+    if (!clientId) { this.showToast('No Twitch Client ID configured in APP_CONFIG.', 'warn'); return; }
+    const redirectUri = window.location.origin;
+    const scopes = ['moderator:read:followers', 'channel:read:subscriptions'];
     const state = Math.random().toString(36).slice(2);
     const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
     authUrl.searchParams.set('client_id', clientId);
@@ -791,11 +872,9 @@ class TwitchGiveawayApp {
   applyUrlParams() {
     const params = new URLSearchParams(window.location.search);
     if (!params) return;
-    const pClient = params.get('clientId');
     const pChannel = params.get('channel');
     const pKeyword = params.get('keyword');
     const pAuto = params.get('autoconnect');
-    if (pClient) this.elements.clientIdInput.value = pClient;
     if (pChannel) {
       this.elements.channelInput.value = pChannel;
       this.channelName = (pChannel || '').trim().toLowerCase();
@@ -861,9 +940,22 @@ class TwitchGiveawayApp {
       }
       this.saveToStorage();
       this.renderHistory();
+      // Switch to History tab so the new entry is visible
+      this._activateSidebarTab('history');
     } catch (e) {
       console.warn('recordWinner failed', e);
     }
+  }
+
+  _activateSidebarTab(tabName) {
+    try {
+      document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sidebar-panel').forEach(p => p.style.display = 'none');
+      const btn = document.querySelector(`.sidebar-tab[data-tab="${tabName}"]`);
+      const panel = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+      if (btn) btn.classList.add('active');
+      if (panel) panel.style.display = '';
+    } catch {}
   }
 
   async connectToChat() {
@@ -967,17 +1059,16 @@ class TwitchGiveawayApp {
 
   setStatus(text, connected) {
     this.elements.connectionStatus.textContent = text;
-    this.elements.connectionStatus.className = `status ${connected ? 'connected' : 'disconnected'}`;
+    this.elements.connectionStatus.className = `status clickable ${connected ? 'connected' : 'disconnected'}`;
   }
 
-  toggleEntries() { this.keywordActive = !this.keywordActive; this.elements.lockBtn.textContent = this.keywordActive ? 'Lock Entries' : 'Unlock Entries'; }
+  toggleEntries() { this.keywordActive = !this.keywordActive; this.updateEntryInfo(); }
   toggleGiveaway() { if (this.giveawayActive) { this.stopEntries(); } else { this.startGiveaway(); } }
 
   startGiveaway() {
     this.giveawayActive = true;
     this.excludedWinners = new Set();
     this.keywordActive = true;
-    this.elements.lockBtn.textContent = 'Lock Entries';
     this.entryStartTime = Date.now();
     this.entryTotalSeconds = Math.max(0, Math.floor((this.entryTimerMinutes||0) * 60));
     this.updateEntryInfo();
@@ -991,12 +1082,12 @@ class TwitchGiveawayApp {
     this.elements.startGiveawayBtn.classList.remove('btn-primary');
     this.elements.startGiveawayBtn.classList.add('btn-danger');
     this.renderWheel();
+    this._activateSidebarTab('participants');
   }
 
   stopEntries() {
     this.giveawayActive = false;
     this.keywordActive = false;
-    this.elements.lockBtn.textContent = 'Unlock Entries';
     if (this.entryTimerInterval) clearInterval(this.entryTimerInterval);
     this.entryTimerInterval = null;
     this.updateEntryInfo(true);
@@ -1082,7 +1173,15 @@ class TwitchGiveawayApp {
     if (!this.keywordActive) { infoEl.textContent = 'Entries are closed'; if (overlayEl) overlayEl.style.display = 'none'; if (emptyCountdown) emptyCountdown.style.display = 'none'; return; }
     if (forceStop || !this.entryTotalSeconds || this.entryTotalSeconds <= 0) {
       infoEl.textContent = `Entries are open${(this.entryTimerMinutes ?? 0) === 0 ? ' (no timer)' : ''}`;
-      if (overlayEl) overlayEl.style.display = 'none';
+      const hasSlicesNow = !!(this.wheel);
+      if (overlayEl) {
+        if (this.showKeyword && hasSlicesNow && this.keyword) {
+          overlayEl.textContent = this.keyword;
+          overlayEl.style.display = 'flex';
+        } else {
+          overlayEl.style.display = 'none';
+        }
+      }
       if (emptyCountdown) emptyCountdown.style.display = 'none';
       return;
     }
@@ -1097,7 +1196,7 @@ class TwitchGiveawayApp {
     if (remaining <= 0) { this.stopEntries(); }
   }
 
-  applyHideSensitive() { const hide = !!this.elements.hideSensitive.checked; this.elements.clientIdInput.type = hide ? 'password' : 'text'; this.saveToStorage(); }
+  applyHideSensitive() { /* removed — Client ID is no longer user-facing */ }
 
   async handleChatMessage(tags, message) {
     const rawMsg = (message || '').trim();
@@ -1131,12 +1230,28 @@ class TwitchGiveawayApp {
     if (!username || this.participants.has(username)) return;
 
     const followData = await this.getFollowerInfo(username);
-    this.participants.set(username, { displayName: displayName || username, followData, ts: Date.now() });
+    if (this.followersOnly && !followData.isFollower) return;
+    const isSubscriber = await this.getSubscriberInfo(username);
+    if (this.subscribersOnly && !isSubscriber) return;
+    this.participants.set(username, { displayName: displayName || username, followData, isSubscriber, ts: Date.now() });
     if (!this._newlyAdded) this._newlyAdded = new Set();
     this._newlyAdded.add(username);
     this.saveToStorage();
     this.renderParticipants();
     this.renderWheel();
+  }
+
+  async getSubscriberInfo(username) {
+    if (!APP_CONFIG.enableFollowerInfo || !this.accessToken || !this.clientId || !this.channelId) return false;
+    try {
+      const { id: userId } = await this.resolveUserId(username);
+      if (!userId) return false;
+      const resp = await fetch(`https://api.twitch.tv/helix/subscriptions/user?broadcaster_id=${this.channelId}&user_id=${encodeURIComponent(userId)}`, {
+        headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
+      });
+      const data = await resp.json();
+      return !!(data?.data && data.data.length > 0);
+    } catch (e) { console.warn('Subscriber lookup failed', e); return false; }
   }
 
   async getFollowerInfo(username) {
@@ -1145,27 +1260,29 @@ class TwitchGiveawayApp {
     }
     if (this.accessToken && this.clientId && this.channelId) {
       try {
-        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.channelId}&user_id=${encodeURIComponent(await this.resolveUserId(username))}`;
+        const { id: userId, profileImageUrl } = await this.resolveUserId(username);
+        const url = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${this.channelId}&user_id=${encodeURIComponent(userId)}`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId } });
         const data = await resp.json();
         if (data?.data && data.data.length > 0) {
           const followedAt = new Date(data.data[0].followed_at);
-          return { isFollower: true, followDurationDays: this.daysSince(followedAt), followDurationText: this.formatDuration(this.daysSince(followedAt)) };
+          return { isFollower: true, followDurationDays: this.daysSince(followedAt), followDurationText: this.formatDuration(this.daysSince(followedAt)), profileImageUrl };
         } else {
-          return { isFollower: false, followDurationDays: 0, followDurationText: 'Not following' };
+          return { isFollower: false, followDurationDays: 0, followDurationText: 'Not following', profileImageUrl };
         }
       } catch (e) { console.warn('Follower lookup failed; falling back'); }
     }
-    return { isFollower: false, followDurationDays: 0, followDurationText: 'Unknown' };
+    return { isFollower: false, followDurationDays: 0, followDurationText: 'Unknown', profileImageUrl: '' };
   }
 
   async resolveUserId(username) {
-    if (!APP_CONFIG.enableFollowerInfo) return '';
+    if (!APP_CONFIG.enableFollowerInfo) return { id: '', profileImageUrl: '' };
     const resp = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
       headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
     });
     const data = await resp.json();
-    return data?.data?.[0]?.id || '';
+    const user = data?.data?.[0];
+    return { id: user?.id || '', profileImageUrl: user?.profile_image_url || '' };
   }
 
   daysSince(date) { return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000*60*60*24))); }
@@ -1179,9 +1296,32 @@ class TwitchGiveawayApp {
     this.renderWheel();
   }
 
+  removeNonFollowers() {
+    if (!this.accessToken) {
+      this.showToast('Authorize with Twitch first to verify follower status.', 'warn');
+      return;
+    }
+    let removed = 0;
+    for (const [username, data] of this.participants.entries()) {
+      if (data.followData?.isFollower === false && data.followData?.followDurationText === 'Not following') {
+        this.participants.delete(username);
+        if (this.excludedWinners) this.excludedWinners.delete(username.toLowerCase());
+        removed++;
+      }
+    }
+    if (removed === 0) {
+      this.showToast('No confirmed non-followers found to remove.', 'info');
+      return;
+    }
+    this.saveToStorage();
+    this.renderParticipants();
+    this.renderWheel();
+    this.showToast(`Removed ${removed} non-follower${removed === 1 ? '' : 's'}.`, 'info');
+  }
+
   updateCombinedKeyword() { this.keyword = ((this.keywordPrefix || '') + (this.keywordText || '')).trim(); this.saveToStorage(); this.renderWheel(); }
 
-  render() { if (this.elements && this.elements.lockBtn) { this.elements.lockBtn.textContent = this.keywordActive ? 'Lock Entries' : 'Unlock Entries'; } this.renderParticipants(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
+  render() { this.renderParticipants(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
 
   renderParticipants() {
     this.elements.participantCount.textContent = this.participants.size.toString();
@@ -1197,8 +1337,9 @@ class TwitchGiveawayApp {
       }
       const followHtml = APP_CONFIG.enableFollowerInfo ? `
         <div class="participant-info">
-          <div class="follower-status ${data.followData.isFollower ? 'yes' : 'no'}">${data.followData.isFollower ? 'Follower' : 'Not Following'}</div>
-          <div>${data.followData.followDurationText}</div>
+          <div class="follower-status ${data.followData?.isFollower ? 'yes' : 'no'}">${data.followData?.isFollower ? 'Follower' : 'Not Following'}</div>
+          ${data.isSubscriber ? '<div class="follower-status subscriber">Subscriber</div>' : ''}
+          <div>${data.followData?.followDurationText || ''}</div>
         </div>` : '';
       item.innerHTML = `
         <div class="participant-name">${data.displayName || username}</div>
@@ -1249,11 +1390,15 @@ class TwitchGiveawayApp {
     el.style.position = 'relative';
     // Skip full rebuild while spinning to preserve the ongoing animation state
     if (this.isSpinning) {
-      if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel`;
+      const excluded = this.participants.size - names.length;
+      const exNote = excluded > 0 ? ` (${excluded} excluded)` : '';
+      if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel${exNote}`;
       return;
     }
     this._renderSpinWheel(names);
-    if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel`;
+    const excluded = this.participants.size - names.length;
+    const exNote = excluded > 0 ? ` (${excluded} excluded)` : '';
+    if (info) info.textContent = `${names.length} participant${names.length===1?'':'s'} on the wheel${exNote}`;
   }
 
   _renderSpinWheel(names) {
@@ -1344,7 +1489,6 @@ class TwitchGiveawayApp {
       if (!this.entryStartTime) this.entryStartTime = Date.now();
     }
     this.keywordActive = false;
-    this.elements.lockBtn.textContent = 'Unlock Entries';
     this.elements.spinBtn.disabled = true;
     this.elements.spinBtn.textContent = 'Spinning...';
     const allNames = Array.from(this.participants.keys());
@@ -1391,6 +1535,11 @@ class TwitchGiveawayApp {
     this.winnerAcknowledged = false;
     this.sadStopRequested = true;
     try { const c = document.getElementById('confettiCanvas'); if (c) { const x = c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } } catch {}
+    const avatarUrl = fd?.profileImageUrl || '';
+    if (this.elements.winnerAvatar) {
+      this.elements.winnerAvatar.src = avatarUrl;
+      this.elements.winnerAvatar.style.display = avatarUrl ? 'block' : 'none';
+    }
     this.elements.winnerName.textContent = this.participants.get(winner)?.displayName || winner;
     this.elements.winnerMeta.textContent = (APP_CONFIG.enableFollowerInfo && fd) ? `${fd.isFollower ? 'Follower' : 'Not Following'} • ${fd.followDurationText}` : '';
     this.elements.winnerChat.innerHTML = '';
@@ -1540,7 +1689,6 @@ class TwitchGiveawayApp {
     this.participants.clear();
     this.excludedWinners = new Set();
     this.keywordActive = true;
-    this.elements.lockBtn.textContent = 'Lock Entries';
     this.elements.wheelElement.style.transform = 'rotate(0deg)';
     this.elements.spinBtn.textContent = 'Spin the Wheel';
     this.saveToStorage();
@@ -1577,26 +1725,17 @@ class TwitchGiveawayApp {
     this.updateHistoryListHeight();
   }
 
-  updateHistoryListHeight() {
-    try {
-      const card = document.getElementById('historyCard');
-      const list = document.getElementById('historyList');
-      if (!card || !list) return;
-      const header = card.querySelector(':scope > div');
-      const headerH = header ? header.offsetHeight : 0;
-      const styles = getComputedStyle(card);
-      const padTop = parseFloat(styles.paddingTop) || 0;
-      const padBottom = parseFloat(styles.paddingBottom) || 0;
-      const target = card.clientHeight - headerH - padTop - padBottom;
-      if (target > 0) {
-        list.style.height = target + 'px';
-        list.style.maxHeight = target + 'px';
-      } else {
-        list.style.height = '';
-        list.style.maxHeight = '';
-      }
-    } catch {}
-  }
+  updateHistoryListHeight() { /* no-op: sidebar panel handles own overflow */ }
 }
 
 const app = new TwitchGiveawayApp();
+
+// Keep sidebar height in sync with the left column so both tiles appear equal height
+(function syncColumnHeights() {
+  const leftbar = document.querySelector('.leftbar');
+  const sidebar = document.querySelector('.sidebar');
+  if (!leftbar || !sidebar) return;
+  const sync = () => { sidebar.style.height = leftbar.offsetHeight + 'px'; };
+  new ResizeObserver(sync).observe(leftbar);
+  sync();
+})();

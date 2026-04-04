@@ -36,14 +36,14 @@ Primary config is at the top of `app.js` in `APP_CONFIG`. Key fields:
 ```js
 APP_CONFIG.defaults.channelName     // pre-filled channel input
 APP_CONFIG.ui.showAddTestParticipants  // set false before shipping
-APP_CONFIG.enableFollowerInfo       // false = entire follower branch is dead/hidden
+APP_CONFIG.enableFollowerInfo       // true = Twitch Client ID + OAuth required (moderator:read:followers)
 ```
 
 The wheel's 14-color palette is **chromakey-safe** (no greens/teals) — preserve this when adding colors.
 
 ## Pitfalls
 
-- **`enableFollowerInfo: false`** disables a large code branch (`authorizeWithTwitch`, `fetchChannelId`, `resolveUserId`). Do not confuse this dead code with active flows when reading the file.
+- **`enableFollowerInfo: true`** — Requires Twitch Client ID + OAuth token (`authorizeWithTwitch`, `fetchChannelId`, `resolveUserId`). The implicit OAuth flow redirects to `https://id.twitch.tv/oauth2/authorize` with `moderator:read:followers` scope. Setting this to `false` hides auth UI and short-circuits all follower lookups.
 - **No `<script type="module">`** — all classes are globals. Do not add ES module syntax (`import`/`export`) without a corresponding build step.
 - **`escapeHtml` regex bug** — the single-quote pattern is `' ` (apostrophe + space) instead of `'`. Twitch usernames are alphanumeric, so this is low impact, but fix before using the function on arbitrary text.
 - **Spin controls have no UI** — `spinDurationSeconds` and `spinSmoothEasing` only exist in `APP_CONFIG` and `localStorage`; there are no form fields for them.
