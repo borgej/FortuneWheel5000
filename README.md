@@ -20,8 +20,6 @@ Upcoming features (maybe, depending on feedback/usage):
 - Giveaway info post to chat, needs Client ID and secret
 - Winner post to chat, needs Client ID and secret
 
-Currently exclusive rights for Twitch streamer [Majorpar](http://www.twitch.tv/majorpar)
-
 Make an issue in the repo if you are interested in using this app! <3
 
 <img width="2221" height="1322" alt="image" src="https://github.com/user-attachments/assets/2d49492b-bd6d-4e37-9f0a-e4224e8584a9" />
