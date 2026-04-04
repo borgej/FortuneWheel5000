@@ -4,6 +4,7 @@ setlocal
 set DEST=\\mediaserver\c$\inetpub\wwwroot\FortuneWheel5000
 set VERSION=
 set TWITCH_CLIENT_ID=b84sr9z49lc7sz62bo23voxvj2x0bw
+set GA_MEASUREMENT_ID=G-FTBB0WTW3N
 
 :: Parse arguments
 :parse_args
@@ -64,6 +65,11 @@ for %%f in (%FILES%) do (
 :: Inject Twitch Client ID into published app.js
 echo Injecting Twitch Client ID...
 powershell -Command "(Get-Content '%DEST%\app.js') -replace '__TWITCH_CLIENT_ID__', '%TWITCH_CLIENT_ID%' | Set-Content '%DEST%\app.js'"
+echo   Done.
+
+:: Inject Google Analytics Measurement ID into published index.html
+echo Injecting Google Analytics ID...
+powershell -Command "(Get-Content '%DEST%\index.html') -replace '__GA_MEASUREMENT_ID__', '%GA_MEASUREMENT_ID%' | Set-Content '%DEST%\index.html'"
 echo   Done.
 
 echo.
