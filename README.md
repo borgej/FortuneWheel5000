@@ -5,20 +5,25 @@ html / javascript application
 
 This application is a simple html/js app that you can run locally on your computer to have a "wheel of fortune" like giveaway in your Twitch chat with a given keyword.
 
-Some features:
-- Local storage for history
-- No API for conencting to Twitch as of now
-- Multiple winners per giveaway
+## Features
+- Connects to Twitch chat via [tmi.js](https://tmijs.com/) (bundled), with a raw WebSocket IRC fallback — no server or API key required
+- Local storage for participants, settings, and giveaway history
+- Multiple winners per giveaway session
 - Animated participants joining list with their slice color
-- Timed giveaway (optional)
-- Timed claim time for winner (optional)
-- Chat from winner popup
-- Chromakey wheel only
-- Chromakey "safe" color palette
+- Timed giveaway with countdown overlay (optional)
+- Timed claim window for winner (optional)
+- Live chat feed from winner in the winner popup
+- Re-spin with automatic winner exclusion
+- Wheel size toggle (normal / large)
+- Green screen / chromakey mode for OBS compositing
+- Chromakey-safe color palette (no greens or teals)
+- Confetti on win, sad-face rain on claim timeout (both toggleable)
+- Tick sound effects during spin (toggleable)
+- OBS browser source friendly: `?autoconnect=1&channel=name&keyword=!wheel` URL params
+- `!me` chat command as an alternative join trigger
 
-Upcoming features (maybe, depending on feedback/usage):
-- Giveaway info post to chat, needs Client ID and secret
-- Winner post to chat, needs Client ID and secret
+## Getting started
+Open `index.html` directly in your browser — no build step, no server needed.
 
 Make an issue in the repo if you are interested in using this app! <3
 
