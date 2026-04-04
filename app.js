@@ -182,24 +182,13 @@ class SimpleCanvasWheel {
 
     ctx.restore(); // end rotation
 
-    // -- Non-rotated centre hub --
+    // -- Centre hub: simple semi-transparent circle --
     ctx.save();
     ctx.translate(cx, cy);
-    const hubR = Math.max(14, r * 0.085);
-    const hubGrad = ctx.createRadialGradient(-hubR * 0.3, -hubR * 0.3, 1, 0, 0, hubR);
-    hubGrad.addColorStop(0, '#f8fafc');
-    hubGrad.addColorStop(0.5, '#94a3b8');
-    hubGrad.addColorStop(1, '#1e293b');
+    const hubR = Math.max(16, r * 0.088);
     ctx.beginPath();
     ctx.arc(0, 0, hubR, 0, Math.PI * 2);
-    ctx.fillStyle = hubGrad;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, hubR * 0.28, 0, Math.PI * 2);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fill();
     ctx.restore();
   }
@@ -446,6 +435,7 @@ class TwitchGiveawayApp {
       spinBtn: document.getElementById('spinBtn'),
   clearBtn: document.getElementById('clearBtn'),
   greenScreenBtn: document.getElementById('greenScreenBtn'),
+      wheelSizeBtn: document.getElementById('wheelSizeBtn'),
       participantsList: document.getElementById('participantsList'),
       participantCount: document.getElementById('participantCount'),
       historyList: document.getElementById('historyList'),
@@ -560,6 +550,7 @@ class TwitchGiveawayApp {
     this.elements.spinBtn.addEventListener('click', () => this.spinWheel());
   if (this.elements.clearBtn) this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
   if (this.elements.greenScreenBtn) this.elements.greenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
+    if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
     this.elements.winnerModal.addEventListener('click', (e) => { if (e.target === this.elements.winnerModal) this.closeWinnerModal(); });
@@ -738,6 +729,19 @@ class TwitchGiveawayApp {
     this.saveToStorage();
     // Resize wheel canvas to fit new layout
     try { if (this.wheel && this.wheel.resize) this.wheel.resize(); } catch {}
+  }
+
+  toggleWheelSize() {
+    const isLarge = document.body.classList.toggle('wheel-large');
+    if (this.elements.wheelSizeBtn) {
+      this.elements.wheelSizeBtn.title = isLarge ? 'Smaller wheel' : 'Bigger wheel';
+      this.elements.wheelSizeBtn.textContent = isLarge ? '⤡' : '⤢';
+    }
+    localStorage.setItem('mw.wheelLarge', isLarge ? '1' : '0');
+    // Give browser a frame to apply CSS before resizing canvas
+    requestAnimationFrame(() => {
+      try { if (this.wheel && this.wheel.resize) this.wheel.resize(); } catch {}
+    });
   }
 
   checkForToken() {

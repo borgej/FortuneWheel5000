@@ -164,6 +164,28 @@ body.is-spinning .wheel-pointer {
   .stream-title { font-size: 40px; }
 }
 
+/* Large wheel mode */
+body.wheel-large {
+  --wheel-size: 820px;
+  --center-col: calc(var(--wheel-size) + 32px);
+}
+body.wheel-large .container {
+  grid-template-columns: 320px var(--center-col) 280px;
+  width: calc(320px + var(--center-col) + 280px + 32px);
+}
+@media (min-width: 1600px) {
+  body.wheel-large {
+    --wheel-size: 960px;
+    --center-col: calc(var(--wheel-size) + 32px);
+  }
+  body.wheel-large .container {
+    grid-template-columns: 340px var(--center-col) 300px;
+    width: calc(340px + var(--center-col) + 300px + 32px);
+  }
+}
+
+#wheelSizeBtn { font-size: 18px; padding: 8px 12px; }
+
 /* Green screen mode: hide side columns and set chroma key background */
 body.greenscreen {
   background: #00ff00 !important;
