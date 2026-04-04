@@ -1,6 +1,9 @@
 // Simple static file server for local development
 // Usage: node server.js
 // Then open: http://localhost:3000
+//
+// Create local.config.js (gitignored) to inject secrets during local dev.
+// Copy local.config.example.js and fill in your values.
 
 const http = require('http');
 const fs = require('fs');
@@ -8,6 +11,17 @@ const path = require('path');
 
 const PORT = 3000;
 const ROOT = __dirname;
+
+let localConfig = {};
+try { localConfig = require('./local.config.js'); } catch {}
+const TWITCH_CLIENT_ID = localConfig.TWITCH_CLIENT_ID || '';
+const GA_MEASUREMENT_ID = localConfig.GA_MEASUREMENT_ID || '';
+
+function injectSecrets(text) {
+  if (TWITCH_CLIENT_ID) text = text.replace(/__TWITCH_CLIENT_ID__/g, TWITCH_CLIENT_ID);
+  if (GA_MEASUREMENT_ID) text = text.replace(/__GA_MEASUREMENT_ID__/g, GA_MEASUREMENT_ID);
+  return text;
+}
 
 const MIME = {
   '.html': 'text/html',
@@ -38,8 +52,16 @@ http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-    res.end(data);
+    const contentType = MIME[ext] || 'application/octet-stream';
+    // Inject secrets into HTML and JS files at serve-time
+    if (ext === '.html' || ext === '.js') {
+      const injected = injectSecrets(data.toString('utf8'));
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(injected, 'utf8');
+    } else {
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    }
   });
 }).listen(PORT, '127.0.0.1', () => {
   console.log(`FortuneWheel5000 running at http://localhost:${PORT}/`);

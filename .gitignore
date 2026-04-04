@@ -4,6 +4,9 @@
 # Publish script (contains server path)
 publish.bat
 
+# Local dev secrets (copy local.config.example.js → local.config.js and fill in values)
+local.config.js
+
 # Node
 node_modules\
 npm-debug.log
@@ -11,3 +14,5 @@ npm-debug.log
 # OS
 Thumbs.db
 .DS_Store
+local.config.example.js
+publish.bat
