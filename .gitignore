@@ -1,6 +1,9 @@
 # Publish destination
 \\mediaserver\c$\inetpub\wwwroot\FortuneWheel5000\
 
+# Publish script (contains server path)
+publish.bat
+
 # Node
 node_modules\
 npm-debug.log
