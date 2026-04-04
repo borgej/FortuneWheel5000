@@ -61,7 +61,7 @@ const APP_CONFIG = {
   },
   defaults: {
     // Optional: set a default channel to prefill the input
-    channelName: 'BeeJeey',
+    channelName: 'Your-Channel-Here',
     keywordPrefix: '!',
     keywordText: 'wheel',
     winnerTimerMinutes: 2,
@@ -1129,7 +1129,14 @@ class TwitchGiveawayApp {
   }
 
   toggleEntries() { this.keywordActive = !this.keywordActive; this.updateEntryInfo(); }
-  toggleGiveaway() { if (this.giveawayActive) { this.stopEntries(); } else { this.startGiveaway(); } }
+  async toggleGiveaway() {
+    if (this.giveawayActive) { this.stopEntries(); return; }
+    if (this.participants.size > 0) {
+      const clear = await this.showConfirm('Clear the current participants list before starting?', 'Start new giveaway');
+      if (clear) { this.participants = new Map(); this.saveToStorage(); this.renderParticipants(); }
+    }
+    this.startGiveaway();
+  }
 
   startGiveaway() {
     this.giveawayActive = true;
