@@ -79,26 +79,43 @@
             <label for="winnerTimerMinutes">Winner Timer (minutes) — 0 for unlimited</label>
             <input id="winnerTimerMinutes" type="number" min="0" step="1" placeholder="2" />
           </div>
-          <div class="toggle-group" style="grid-column: 1 / -1;">
-            <label class="toggle" title="Show confetti when someone wins">
-              <input id="confettiToggle" type="checkbox" checked /> <span class="toggle-icon">🎉</span> Confetti on win
-            </label>
-            <label class="toggle" title="Show sad faces when the winner times out">
-              <input id="sadToggle" type="checkbox" checked /> <span class="toggle-icon">😢</span> Sad faces on timeout
-            </label>
-            <label class="toggle" title="Play tick sounds while spinning">
-              <input id="tickToggle" type="checkbox" checked /> <span class="toggle-icon">🔊</span> Tick sounds
-            </label>
-            <label class="toggle" title="Show the giveaway keyword in the centre of the wheel while entries are open">
-              <input id="showKeywordToggle" type="checkbox" checked /> <span class="toggle-icon">🔑</span> Show keyword
-            </label>
-            <label class="toggle" title="Only let followers join — requires Twitch authorization">
-              <input id="followersOnlyToggle" type="checkbox" /> <span class="toggle-icon">&#x1F49C;</span> Followers only
-            </label>
-            <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
-              <input id="subscribersOnlyToggle" type="checkbox" /> <span class="toggle-icon">⭐</span> Subscribers only
-            </label>
-          </div>
+          <details class="options-details" style="grid-column: 1 / -1;" open>
+            <summary class="options-summary">⚙️ Options</summary>
+            <div class="toggle-group">
+              <label class="toggle" title="Show confetti when someone wins">
+                <input id="confettiToggle" type="checkbox" checked /> <span class="toggle-icon">🎉</span> Confetti on win
+              </label>
+              <label class="toggle" title="Show sad faces when the winner times out">
+                <input id="sadToggle" type="checkbox" checked /> <span class="toggle-icon">😢</span> Sad faces on timeout
+              </label>
+              <label class="toggle" title="Play tick sounds while spinning">
+                <input id="tickToggle" type="checkbox" checked /> <span class="toggle-icon">🔊</span> Tick sounds
+              </label>
+              <label class="toggle" title="Show the giveaway keyword in the centre of the wheel while entries are open">
+                <input id="showKeywordToggle" type="checkbox" checked /> <span class="toggle-icon">🔑</span> Show keyword
+              </label>
+              <label class="toggle" title="Only let followers join — requires Twitch authorization">
+                <input id="followersOnlyToggle" type="checkbox" /> <span class="toggle-icon">&#x1F49C;</span> Followers only
+              </label>
+              <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
+                <input id="subscribersOnlyToggle" type="checkbox" /> <span class="toggle-icon">⭐</span> Subscribers only
+              </label>
+              <label class="toggle" title="Post a message in chat when the giveaway starts — requires Twitch authorization">
+                <input id="startMsgToggle" type="checkbox" /> <span class="toggle-icon">💬</span> Start message
+              </label>
+              <label class="toggle" title="Announce the winner in chat — requires Twitch authorization">
+                <input id="winnerMsgToggle" type="checkbox" /> <span class="toggle-icon">🏆</span> Announce winner
+              </label>
+            </div>
+            <div class="input-group" id="startMsgGroup" style="margin-top: 8px; display: none;">
+              <label for="startMsgInput">Start message <small style="opacity:.6">({keyword} = giveaway keyword)</small></label>
+              <input id="startMsgInput" type="text" placeholder="A giveaway is open! Type {keyword} to enter!" />
+            </div>
+            <div class="input-group" id="winnerMsgGroup" style="margin-top: 8px; display: none;">
+              <label for="winnerMsgInput">Winner message <small style="opacity:.6">({winner} = winner's name)</small></label>
+              <input id="winnerMsgInput" type="text" placeholder="Congratulations @{winner}! You won the giveaway! 🎉" />
+            </div>
+          </details>
           <div class="toolbar" style="grid-column: 1 / -1;">
             <button id="startGiveawayBtn" class="btn-primary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
             <button id="clearGiveawayBtn" class="btn-secondary" title="Clear all participants and reset the wheel">Clear</button>
@@ -238,7 +255,7 @@
   <script src="./js/config.js"></script>
   <script src="./js/wheel.js"></script>
   <script src="./js/twitch-chat.js"></script>
-  <script src="./app.js?v=v1.1"></script>
+  <script src="./app.js?v=1.2"></script>
   <script src="./js/consent.js"></script>
 </body>
 </html>
