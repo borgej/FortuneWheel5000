@@ -532,6 +532,12 @@ class TwitchGiveawayApp {
       const user = data?.data?.[0];
       if (!user) return;
       this.authorizedUserId = user.id || null;
+      // Fire GA event — only sent if user has consented to analytics (GA consent mode handles suppression)
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', 'twitch_authorized', { channel: (user.login || '').toLowerCase() });
+        }
+      } catch {}
       // Only auto-fill if the channel field is still empty or has a stale/default value
       const currentVal = (this.elements.channelInput?.value || '').trim().toLowerCase();
       const configDefault = (APP_CONFIG?.defaults?.channelName || '').toLowerCase();
@@ -1378,6 +1384,8 @@ class TwitchGiveawayApp {
     if (names.length === 0) { this.isSpinning = false; this.elements.spinBtn.disabled = false; this.elements.spinBtn.textContent = 'Spin the Wheel'; return; }
     if (this.elements.entryOverlay) this.elements.entryOverlay.style.display = 'none';
     document.body.classList.add('is-spinning');
+    // GA: track spin
+    try { if (typeof gtag === 'function') gtag('event', 'wheel_spin', { participant_count: names.length, channel: this.channelName || '' }); } catch {}
     // Winner index is random each spin; no bias
     const winnerIndex = Math.floor(Math.random() * names.length);
     if (this.wheel && this.wheel.spinToIndex) {
@@ -1412,6 +1420,8 @@ class TwitchGiveawayApp {
   showWinner(winner) {
     const fd = this.participants.get(winner)?.followData;
     this.currentWinner = (winner || '').toLowerCase();
+    // GA: track winner drawn
+    try { if (typeof gtag === 'function') gtag('event', 'winner_drawn', { winner: (winner || '').toLowerCase(), channel: this.channelName || '' }); } catch {}
     this.winnerAcknowledged = false;
     this.sadStopRequested = true;
     try { const c = document.getElementById('confettiCanvas'); if (c) { const x = c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } } catch {}
