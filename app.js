@@ -31,6 +31,11 @@ class TwitchGiveawayApp {
     this.followersOnly = false;
     this.subscribersOnly = false;
     this.showKeyword = true;
+    this.sendStartMsg = false;
+    this.startMsgText = 'A giveaway is open! Type {keyword} to enter!';
+    this.sendWinnerMsg = false;
+    this.winnerMsgText = 'Congratulations {winner}! You won the giveaway! 🎉';
+    this.authorizedUserId = null;
   // Spin behavior
   this.spinDurationSeconds = APP_CONFIG?.defaults?.spinDurationSeconds ?? 5;
   this.spinSmoothEasing = APP_CONFIG?.defaults?.spinSmoothEasing ?? true;
@@ -90,6 +95,10 @@ class TwitchGiveawayApp {
       followersOnlyToggle: document.getElementById('followersOnlyToggle'),
       subscribersOnlyToggle: document.getElementById('subscribersOnlyToggle'),
       showKeywordToggle: document.getElementById('showKeywordToggle'),
+      startMsgToggle: document.getElementById('startMsgToggle'),
+      startMsgInput: document.getElementById('startMsgInput'),
+      winnerMsgToggle: document.getElementById('winnerMsgToggle'),
+      winnerMsgInput: document.getElementById('winnerMsgInput'),
       startGiveawayBtn: document.getElementById('startGiveawayBtn'),
       entryTimerMinutesInput: document.getElementById('entryTimerMinutes'),
   // spin controls removed from UI; config via APP_CONFIG
@@ -245,6 +254,34 @@ class TwitchGiveawayApp {
         this.updateEntryInfo();
       });
     }
+    if (this.elements.startMsgToggle) {
+      this.elements.startMsgToggle.addEventListener('change', () => {
+        this.sendStartMsg = !!this.elements.startMsgToggle.checked;
+        const group = document.getElementById('startMsgGroup');
+        if (group) group.style.display = this.sendStartMsg ? '' : 'none';
+        this.saveToStorage();
+      });
+    }
+    if (this.elements.startMsgInput) {
+      this.elements.startMsgInput.addEventListener('input', (e) => {
+        this.startMsgText = e.target.value;
+        this.saveToStorage();
+      });
+    }
+    if (this.elements.winnerMsgToggle) {
+      this.elements.winnerMsgToggle.addEventListener('change', () => {
+        this.sendWinnerMsg = !!this.elements.winnerMsgToggle.checked;
+        const group = document.getElementById('winnerMsgGroup');
+        if (group) group.style.display = this.sendWinnerMsg ? '' : 'none';
+        this.saveToStorage();
+      });
+    }
+    if (this.elements.winnerMsgInput) {
+      this.elements.winnerMsgInput.addEventListener('input', (e) => {
+        this.winnerMsgText = e.target.value;
+        this.saveToStorage();
+      });
+    }
 
     this.elements.keywordPrefixInput.addEventListener('input', (e) => {
       this.keywordPrefix = (e.target.value || '').trim();
@@ -283,8 +320,13 @@ class TwitchGiveawayApp {
           // clientId is baked into APP_CONFIG — always use that
           this.clientId = APP_CONFIG.clientId || '';
           if (this.elements.channelInput && typeof s.channelName === 'string') {
-            this.elements.channelInput.value = s.channelName;
-            this.channelName = (s.channelName || '').trim().toLowerCase();
+            const storedChannel = s.channelName.trim().toLowerCase();
+            // Discard the old placeholder value that may be saved in cookies
+            const isStale = storedChannel === 'your-channel-here';
+            if (!isStale) {
+              this.elements.channelInput.value = storedChannel;
+              this.channelName = storedChannel;
+            }
           } else if (this.elements.channelInput && APP_CONFIG?.defaults?.channelName) {
             // Seed default channel if none stored; URL params can override later
             this.elements.channelInput.value = APP_CONFIG.defaults.channelName;
@@ -313,6 +355,26 @@ class TwitchGiveawayApp {
           if (typeof s.followersOnly === 'boolean') { this.followersOnly = s.followersOnly; if (this.elements.followersOnlyToggle) this.elements.followersOnlyToggle.checked = s.followersOnly; }
           if (typeof s.subscribersOnly === 'boolean') { this.subscribersOnly = s.subscribersOnly; if (this.elements.subscribersOnlyToggle) this.elements.subscribersOnlyToggle.checked = s.subscribersOnly; }
           if (typeof s.showKeyword === 'boolean') { this.showKeyword = s.showKeyword; if (this.elements.showKeywordToggle) this.elements.showKeywordToggle.checked = s.showKeyword; }
+          if (typeof s.sendStartMsg === 'boolean') {
+            this.sendStartMsg = s.sendStartMsg;
+            if (this.elements.startMsgToggle) this.elements.startMsgToggle.checked = s.sendStartMsg;
+            const group = document.getElementById('startMsgGroup');
+            if (group) group.style.display = s.sendStartMsg ? '' : 'none';
+          }
+          if (typeof s.startMsgText === 'string') {
+            this.startMsgText = s.startMsgText;
+            if (this.elements.startMsgInput) this.elements.startMsgInput.value = s.startMsgText;
+          }
+          if (typeof s.sendWinnerMsg === 'boolean') {
+            this.sendWinnerMsg = s.sendWinnerMsg;
+            if (this.elements.winnerMsgToggle) this.elements.winnerMsgToggle.checked = s.sendWinnerMsg;
+            const group = document.getElementById('winnerMsgGroup');
+            if (group) group.style.display = s.sendWinnerMsg ? '' : 'none';
+          }
+          if (typeof s.winnerMsgText === 'string') {
+            this.winnerMsgText = s.winnerMsgText;
+            if (this.elements.winnerMsgInput) this.elements.winnerMsgInput.value = s.winnerMsgText;
+          }
           if (typeof s.wheelPaletteIndex === 'number' && s.wheelPaletteIndex >= 0 && s.wheelPaletteIndex < WHEEL_PALETTES.length) { this.wheelPaletteIndex = s.wheelPaletteIndex; }
           if (typeof s.greenScreen === 'boolean') {
             document.body.classList.toggle('greenscreen', !!s.greenScreen);
@@ -384,6 +446,10 @@ class TwitchGiveawayApp {
         followersOnly: !!this.followersOnly,
         subscribersOnly: !!this.subscribersOnly,
         showKeyword: !!this.showKeyword,
+        sendStartMsg: !!this.sendStartMsg,
+        startMsgText: this.startMsgText || '',
+        sendWinnerMsg: !!this.sendWinnerMsg,
+        winnerMsgText: this.winnerMsgText || '',
         wheelPaletteIndex: this.wheelPaletteIndex || 0,
       };
       mwSetCookie('mw.settings', settings, 365);
@@ -444,6 +510,7 @@ class TwitchGiveawayApp {
 
   revokeAuth() {
     this.accessToken = null;
+    this.authorizedUserId = null;
     sessionStorage.removeItem('mw.accessToken');
     this.disconnectFromChat();
     const channelGroup = document.getElementById('channelInputGroup');
@@ -464,10 +531,12 @@ class TwitchGiveawayApp {
       const data = await resp.json();
       const user = data?.data?.[0];
       if (!user) return;
-      // Only auto-fill if the channel field is still empty or has the config default
+      this.authorizedUserId = user.id || null;
+      // Only auto-fill if the channel field is still empty or has a stale/default value
       const currentVal = (this.elements.channelInput?.value || '').trim().toLowerCase();
       const configDefault = (APP_CONFIG?.defaults?.channelName || '').toLowerCase();
-      if (!currentVal || currentVal === configDefault) {
+      const isStaleVal = currentVal === 'your-channel-here';
+      if (!currentVal || currentVal === configDefault || isStaleVal) {
         const login = (user.login || '').toLowerCase();
         if (this.elements.channelInput) this.elements.channelInput.value = login;
         this.channelName = login;
@@ -531,7 +600,7 @@ class TwitchGiveawayApp {
     const clientId = APP_CONFIG.clientId || '';
     if (!clientId) { this.showToast('No Twitch Client ID configured in APP_CONFIG.', 'warn'); return; }
     const redirectUri = APP_CONFIG.redirectUri || (window.location.origin + window.location.pathname).replace(/\/index\.html$/i, '');
-    const scopes = ['moderator:read:followers', 'channel:read:subscriptions'];
+    const scopes = ['moderator:read:followers', 'channel:read:subscriptions', 'user:write:chat'];
     const state = Math.random().toString(36).slice(2);
     const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
     authUrl.searchParams.set('client_id', clientId);
@@ -766,6 +835,7 @@ class TwitchGiveawayApp {
     this.elements.startGiveawayBtn.classList.add('btn-danger');
     this.renderWheel();
     this._activateSidebarTab('participants');
+    this._sendStartMessage();
   }
 
   stopEntries() {
@@ -784,6 +854,102 @@ class TwitchGiveawayApp {
     this.elements.startGiveawayBtn.classList.remove('btn-danger');
     this.elements.startGiveawayBtn.classList.add('btn-primary');
     if (this._debugTimeouts && this._debugTimeouts.length) { for (const id of this._debugTimeouts) { try { clearTimeout(id); } catch {} } this._debugTimeouts = []; }
+  }
+
+  async _sendStartMessage() {
+    if (!this.sendStartMsg) return;
+    const rawMsg = (this.startMsgText || '').trim();
+    if (!rawMsg) return;
+    if (!this.accessToken || !this.clientId) {
+      this.showToast('Enable Twitch authorization to send a start message.', 'warn');
+      return;
+    }
+    if (!this.authorizedUserId) {
+      this.showToast('Could not send start message — authorized user not identified.', 'warn');
+      return;
+    }
+    let broadcasterId = this.channelId;
+    if (!broadcasterId && this.channelName) {
+      try {
+        const resp = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(this.channelName)}`, {
+          headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
+        });
+        const data = await resp.json();
+        broadcasterId = data?.data?.[0]?.id || null;
+      } catch {}
+    }
+    if (!broadcasterId) {
+      this.showToast('Could not resolve channel ID for start message.', 'warn');
+      return;
+    }
+    const keyword = ((this.keywordPrefix || '') + (this.keywordText || '')).trim();
+    const message = rawMsg.replace(/\{keyword\}/gi, keyword);
+    try {
+      const resp = await fetch('https://api.twitch.tv/helix/chat/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Client-Id': this.clientId,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: this.authorizedUserId, message }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.warn('Failed to send start message', err);
+        this.showToast('Failed to send chat start message.', 'warn');
+      }
+    } catch (e) {
+      console.warn('_sendStartMessage failed', e);
+    }
+  }
+
+  async _sendWinnerMessage(winner) {
+    if (!this.sendWinnerMsg) return;
+    const rawMsg = (this.winnerMsgText || '').trim();
+    if (!rawMsg) return;
+    if (!this.accessToken || !this.clientId) {
+      this.showToast('Enable Twitch authorization to announce the winner.', 'warn');
+      return;
+    }
+    if (!this.authorizedUserId) {
+      this.showToast('Could not announce winner — authorized user not identified.', 'warn');
+      return;
+    }
+    let broadcasterId = this.channelId;
+    if (!broadcasterId && this.channelName) {
+      try {
+        const resp = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(this.channelName)}`, {
+          headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
+        });
+        const data = await resp.json();
+        broadcasterId = data?.data?.[0]?.id || null;
+      } catch {}
+    }
+    if (!broadcasterId) {
+      this.showToast('Could not resolve channel ID for winner announcement.', 'warn');
+      return;
+    }
+    const displayName = this.participants.get(winner)?.displayName || winner;
+    const message = rawMsg.replace(/\{winner\}/gi, displayName);
+    try {
+      const resp = await fetch('https://api.twitch.tv/helix/chat/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Client-Id': this.clientId,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: this.authorizedUserId, message }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.warn('Failed to send winner message', err);
+        this.showToast('Failed to send winner announcement.', 'warn');
+      }
+    } catch (e) {
+      console.warn('_sendWinnerMessage failed', e);
+    }
   }
 
   addDebugParticipants() {
@@ -1269,6 +1435,7 @@ class TwitchGiveawayApp {
     this.elements.winnerModal.style.display = 'flex';
     this.startWinnerTimer();
     if (this.enableConfetti) this.launchConfetti();
+    this._sendWinnerMessage(winner);
   }
 
   closeWinnerModal() {

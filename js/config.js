@@ -23,7 +23,7 @@ const APP_CONFIG = {
   },
   defaults: {
     // Optional: set a default channel to prefill the input
-    channelName: 'Your-Channel-Here',
+    channelName: '',
     keywordPrefix: '!',
     keywordText: 'wheel',
     winnerTimerMinutes: 2,
