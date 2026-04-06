@@ -506,6 +506,31 @@ class TwitchGiveawayApp {
     if (subscriberToggleEl) { subscriberToggleEl.disabled = !authed; subscriberToggleEl.closest('label').style.opacity = authed ? '' : '0.35'; subscriberToggleEl.closest('label').title = authed ? '' : 'Requires Twitch authorization'; }
     if (removeNonFollowersBtn) removeNonFollowersBtn.style.display = authed ? '' : 'none';
     if (removeNonSubscribersBtn) removeNonSubscribersBtn.style.display = authed ? '' : 'none';
+    // Disable chat message toggles when not authorized
+    const startMsgToggleEl = this.elements.startMsgToggle;
+    const winnerMsgToggleEl = this.elements.winnerMsgToggle;
+    if (startMsgToggleEl) {
+      startMsgToggleEl.disabled = !authed;
+      startMsgToggleEl.closest('label').style.opacity = authed ? '' : '0.35';
+      startMsgToggleEl.closest('label').title = authed ? 'Post a message in chat when the giveaway starts — requires Twitch authorization' : 'Requires Twitch authorization';
+      if (!authed) {
+        startMsgToggleEl.checked = false;
+        this.sendStartMsg = false;
+        const group = document.getElementById('startMsgGroup');
+        if (group) group.style.display = 'none';
+      }
+    }
+    if (winnerMsgToggleEl) {
+      winnerMsgToggleEl.disabled = !authed;
+      winnerMsgToggleEl.closest('label').style.opacity = authed ? '' : '0.35';
+      winnerMsgToggleEl.closest('label').title = authed ? 'Announce the winner in chat — requires Twitch authorization' : 'Requires Twitch authorization';
+      if (!authed) {
+        winnerMsgToggleEl.checked = false;
+        this.sendWinnerMsg = false;
+        const group = document.getElementById('winnerMsgGroup');
+        if (group) group.style.display = 'none';
+      }
+    }
   }
 
   revokeAuth() {
