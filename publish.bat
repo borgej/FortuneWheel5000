@@ -62,9 +62,23 @@ for %%f in (%FILES%) do (
     echo   Copied %%f
 )
 
-:: Inject Twitch Client ID into published app.js
+:: Copy js/ folder
+if not exist "%DEST%\js" mkdir "%DEST%\js"
+set JS_FILES=tmi-loader.js cookies.js config.js wheel.js twitch-chat.js consent.js
+for %%f in (%JS_FILES%) do (
+    copy /Y "js\%%f" "%DEST%\js\%%f" >nul
+    if errorlevel 1 (
+        echo ERROR: Failed to copy js\%%f
+        pause
+        exit /b 1
+    )
+    echo   Copied js\%%f
+)
+
+:: Inject Twitch Client ID into published app.js and js/config.js
 echo Injecting Twitch Client ID...
 powershell -Command "(Get-Content '%DEST%\app.js') -replace '__TWITCH_CLIENT_ID__', '%TWITCH_CLIENT_ID%' | Set-Content '%DEST%\app.js'"
+powershell -Command "(Get-Content '%DEST%\js\config.js') -replace '__TWITCH_CLIENT_ID__', '%TWITCH_CLIENT_ID%' | Set-Content '%DEST%\js\config.js'"
 echo   Done.
 
 :: Inject Google Analytics Measurement ID into published index.html
