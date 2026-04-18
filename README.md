@@ -32,6 +32,8 @@ Open it in your browser and start spinning. Nothing to install, nothing to sign 
 ### ⚓ World of Warships — Random Ship Selector
 Pick a random ship from your own port to play next — great for challenge runs, stream variety, or just leaving it up to fate.
 
+https://github.com/user-attachments/assets/e5a36355-c930-4235-a01c-2fcc8f1c65ff
+
 - **Log in with Wargaming** (OAuth) to see only ships currently in your port, or enter your account ID / username to search from all ships ever played
 - Supports all regions: EU, NA, Asia, RU
 - **Multi-step spin sequence**: the wheel spins for Tier, Ship Type, Nation, then Ship — in that order, or in a random order if you enable the shuffle toggle
