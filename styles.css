@@ -124,16 +124,20 @@ body.is-spinning .wheel-pointer {
 .sidebar-panel #historyList { flex: 1 1 0; overflow-y: auto; min-height: 0; padding-right: 2px; }
 .sidebar::-webkit-scrollbar,
 #historyList::-webkit-scrollbar,
-#participantsList::-webkit-scrollbar { width: 6px; }
+#participantsList::-webkit-scrollbar,
+#shipHistoryList::-webkit-scrollbar { width: 6px; }
 .sidebar::-webkit-scrollbar-track,
 #historyList::-webkit-scrollbar-track,
-#participantsList::-webkit-scrollbar-track { background: rgba(2,6,12,0.4); border-radius: 10px; }
+#participantsList::-webkit-scrollbar-track,
+#shipHistoryList::-webkit-scrollbar-track { background: rgba(2,6,12,0.4); border-radius: 10px; }
 .sidebar::-webkit-scrollbar-thumb,
 #historyList::-webkit-scrollbar-thumb,
-#participantsList::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #22d3ee55, #7c3aed88); border-radius: 10px; }
+#participantsList::-webkit-scrollbar-thumb,
+#shipHistoryList::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #22d3ee55, #7c3aed88); border-radius: 10px; }
 .sidebar::-webkit-scrollbar-thumb:hover,
 #historyList::-webkit-scrollbar-thumb:hover,
-#participantsList::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #22d3eeaa, #7c3aedcc); }
+#participantsList::-webkit-scrollbar-thumb:hover,
+#shipHistoryList::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #22d3eeaa, #7c3aedcc); }
 .leftbar { display: flex; flex-direction: column; gap: 16px; height: auto; max-height: none; overflow-y: visible; overflow-x: hidden; }
 /* historyCard removed from leftbar; history is now in the sidebar tab */
 /* .history h3 removed: no .history container in markup */
@@ -222,6 +226,321 @@ details.options-details[open] .options-summary::after { transform: rotate(-180de
 .progress-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #06b6d4, #7c3aed); transition: width 0.25s linear; box-shadow: 0 0 12px rgba(124,58,237,0.4); }
 .progress-bar.low { background: linear-gradient(90deg, #ef4444, #f59e0b); }
 
+/* ── Mode tabs ──────────────────────────────────────────────────────────── */
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.mode-tab {
+  flex: 1;
+  padding: 9px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 10px;
+  background: rgba(30,41,59,0.55);
+  border: 1px solid rgba(148,163,184,0.2);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  letter-spacing: 0.2px;
+}
+.mode-tab:hover:not(.active) {
+  background: rgba(30,41,59,0.85);
+  color: #cbd5e1;
+}
+.mode-tab.active {
+  background: linear-gradient(45deg, rgba(0,229,255,0.18), rgba(124,58,237,0.22));
+  border-color: rgba(0,229,255,0.4);
+  color: #e2e8f0;
+}
+
+/* ── WoWS select inputs ──────────────────────────────────────────────────── */
+.wows-select {
+  padding: 10px 12px;
+  border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 8px;
+  background: rgba(2,6,12,0.6);
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 700;
+  width: 100%;
+  cursor: pointer;
+  appearance: auto;
+}
+.wows-select:focus {
+  outline: none;
+  border-color: rgba(99,102,241,0.6);
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.25);
+}
+.wows-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 10px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+/* ── Wargaming login ─────────────────────────────────────────────────────── */
+.wows-login-btn {
+  background: linear-gradient(135deg, #b36b00, #d98c00);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.wows-login-btn:hover  { opacity: 0.88; }
+.wows-login-btn:active { transform: scale(0.97); }
+.wows-auth-status { font-size: 12px; font-weight: 600; line-height: 1.4; }
+.wows-auth-hint   { color: #475569; }
+.wows-auth-ok     { color: #10b981; }
+
+/* ── Ship wheel stage ────────────────────────────────────────────────────── */
+.ship-wheel-stage {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  flex: 1;
+  padding: 8px 0;
+}
+.ship-wheel-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ship-wheel-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.ship-wheel-slot {
+  position: relative;
+  flex-shrink: 0;
+}
+.ship-wheel-slot .wheel-pointer {
+  /* override to a smaller pointer that fits tighter wheel sizes */
+  width: 40px;
+  height: 14px;
+  right: -20px;
+}
+
+/* ── Sequential spin UI ─────────────────────────────────────────────────── */
+.ship-spin-label {
+  font-size: 15px;
+  font-weight: 900;
+  color: #7dd3fc;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-shadow: 0 0 12px rgba(14,165,233,0.4);
+}
+.ship-spin-results {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 12px;
+  min-height: 32px;
+}
+.ship-result-chip {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: linear-gradient(45deg, rgba(0,229,255,0.18), rgba(124,58,237,0.22));
+  border: 1px solid rgba(0,229,255,0.4);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+/* ── Tier range filter ───────────────────────────────────────────────────── */
+.tier-range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tier-range-row .wows-select { flex: 1; }
+.tier-range-sep {
+  color: #64748b;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Step reveal overlay ─────────────────────────────────────────────────── */
+.ship-wheel-stage { position: relative; }
+.ship-step-reveal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.88);
+  z-index: 50;
+  border-radius: 16px;
+  animation: ship-reveal-in 0.25s ease;
+  backdrop-filter: blur(4px);
+}
+.ship-step-reveal.ship-step-reveal-out {
+  animation: ship-reveal-out 0.4s ease forwards;
+}
+.ship-step-reveal-inner { text-align: center; padding: 24px 40px; border-radius: 12px; }
+.ship-step-reveal-cat {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+.ship-step-reveal-val {
+  font-size: 46px;
+  font-weight: 900;
+  color: #7dd3fc;
+  text-shadow: 0 0 30px rgba(14, 165, 233, 0.6), 0 0 60px rgba(14, 165, 233, 0.25);
+  letter-spacing: -0.5px;
+}
+@keyframes ship-reveal-in  { from { opacity:0; transform:scale(0.88); } to { opacity:1; transform:scale(1); } }
+@keyframes ship-reveal-out { to { opacity:0; transform:scale(1.06); } }
+
+/* ── Ship history sidebar ────────────────────────────────────────────────── */
+.ship-history-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+.ship-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.ship-history-title {
+  font-weight: 800;
+  font-size: 13px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ship-history-item {
+  background: rgba(2, 6, 12, 0.6);
+  border-left: 4px solid #0891b2;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  box-shadow: 0 1px 0 rgba(8, 145, 178, 0.2) inset;
+}
+.ship-history-tier {
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.15);
+  border-radius: 6px;
+  padding: 3px 6px;
+  letter-spacing: 0.5px;
+}
+.ship-history-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ship-history-meta {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* ── Ship result modal ───────────────────────────────────────────────────── */
+.ship-result-card h2 {
+  color: #7dd3fc;
+  text-shadow: 0 2px 10px rgba(14,165,233,0.45);
+}
+.ship-result-image {
+  max-width: 240px;
+  max-height: 140px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 4px auto 8px;
+  display: block;
+  filter: drop-shadow(0 2px 12px rgba(14,165,233,0.35));
+}
+.ship-result-tier {
+  font-size: 14px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.ship-result-name {
+  font-size: 38px !important;
+  color: #7dd3fc !important;
+  text-shadow: 0 2px 14px rgba(14,165,233,0.5) !important;
+}
+.ship-result-meta {
+  font-size: 14px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+.ship-result-stats {
+  background: rgba(0,0,0,0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+.ship-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ship-stat-label {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-size: 11px;
+  width: 52px;
+  flex-shrink: 0;
+}
+.ship-stat-val {
+  font-size: 18px;
+  font-weight: 900;
+  min-width: 52px;
+}
+.ship-stat-val.wr-great { color: #34d399; text-shadow: 0 0 8px rgba(52,211,153,0.5); }
+.ship-stat-val.wr-good  { color: #7dd3fc; }
+.ship-stat-val.wr-bad   { color: #f87171; }
+.ship-stat-battles {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 @media (max-width: 980px) {
   .container { grid-template-columns: 1fr; width: auto; }
   :root { --wheel-size: 420px; }
@@ -276,4 +595,59 @@ body.greenscreen .wheel-stage { box-shadow: none !important; background: transpa
 body.greenscreen .wheel { box-shadow: none !important; }
 body.greenscreen .wheel-pointer { box-shadow: none !important; filter: none !important; }
 /* Keep green pure under overlays in greenscreen mode */
-body.greenscreen .winner-announcement { background: transparent !important; }
+body.greenscreen .winner-announcement { background: transparent !important; backdrop-filter: none !important; }
+#exitGreenScreenBtn {
+  display: block;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 3000;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.2;
+  transition: opacity 0.2s;
+}
+#exitGreenScreenBtn:hover { opacity: 1; }
+body.greenscreen #exitGreenScreenBtn { opacity: 0.5; }
+/* Greenscreen floating spin button */
+#shipGsSpinBtn {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 14px 36px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(79,70,229,0.5);
+  transition: opacity 0.2s, transform 0.1s;
+}
+#shipGsSpinBtn:hover { opacity: 0.9; transform: translateX(-50%) scale(1.03); }
+#shipGsSpinBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: translateX(-50%); }
+/* Ship type checkboxes */
+.ship-type-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ship-type-cb-label {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(30,41,59,0.7); border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px;
+  transition: background 0.15s, border-color 0.15s; user-select: none;
+}
+.ship-type-cb-label:has(input:checked) { background: rgba(79,70,229,0.3); border-color: #6366f1; }
+.ship-type-cb-label input { accent-color: #6366f1; cursor: pointer; }
+/* Ship mode greenscreen — transparent stage and overlays */
+body.greenscreen .ship-wheel-stage   { background: transparent !important; box-shadow: none !important; }
+body.greenscreen .ship-spin-label    { background: transparent !important; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+body.greenscreen .ship-spin-results  { background: transparent !important; }
+body.greenscreen .ship-result-chip   { background: rgba(0,0,0,0.55) !important; }
+body.greenscreen .ship-step-reveal   { background: transparent !important; }
+body.greenscreen .ship-step-reveal-inner { background: rgba(0,0,0,0.6) !important; }

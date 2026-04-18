@@ -75,7 +75,6 @@ class TwitchGiveawayApp {
   clearBtn: document.getElementById('clearBtn'),
   removeNonFollowersBtn: document.getElementById('removeNonFollowersBtn'),
       removeNonSubscribersBtn: document.getElementById('removeNonSubscribersBtn'),
-  greenScreenBtn: document.getElementById('greenScreenBtn'),
       wheelSizeBtn: document.getElementById('wheelSizeBtn'),
       participantsList: document.getElementById('participantsList'),
       participantCount: document.getElementById('participantCount'),
@@ -208,7 +207,6 @@ class TwitchGiveawayApp {
   if (closePaletteBtn) closePaletteBtn.addEventListener('click', () => this.closePaletteModal());
   if (this.elements.removeNonFollowersBtn) this.elements.removeNonFollowersBtn.addEventListener('click', () => this.removeNonFollowers());
   if (this.elements.removeNonSubscribersBtn) this.elements.removeNonSubscribersBtn.addEventListener('click', () => this.removeNonSubscribers());
-  if (this.elements.greenScreenBtn) this.elements.greenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
@@ -611,6 +609,7 @@ class TwitchGiveawayApp {
           this.setStatus('Authorized with Twitch • follower info enabled', true);
           this.updateConnectionPanelForAuth();
           this.fetchAuthorizedUser();
+          try { if (typeof gtag === 'function') gtag('event', 'twitch_auth', { method: 'new' }); } catch {}
           return;
         }
       }
@@ -620,6 +619,7 @@ class TwitchGiveawayApp {
         this.setStatus('Authorized with Twitch • follower info enabled', true);
         this.updateConnectionPanelForAuth();
         this.fetchAuthorizedUser();
+        try { if (typeof gtag === 'function') gtag('event', 'twitch_auth', { method: 'restored' }); } catch {}
         return;
       }
     } catch {}
@@ -1669,6 +1669,7 @@ class TwitchGiveawayApp {
 }
 
 const app = new TwitchGiveawayApp();
+window._toggleGreenScreen = () => app.toggleGreenScreen();
 
 // Keep sidebar height in sync with the left column so both tiles appear equal height
 (function syncColumnHeights() {
