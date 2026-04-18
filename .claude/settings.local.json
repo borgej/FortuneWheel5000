@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc *)",
+      "WebFetch(domain:developers.wargaming.net)",
+      "WebSearch",
+      "WebFetch(domain:publicapi.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hexdocs.pm)",
+      "WebFetch(domain:wows-numbers.com)",
+      "WebFetch(domain:metacpan.org)",
+      "WebFetch(domain:shiptool.st)",
+      "WebFetch(domain:community.mybb.com)",
+      "Bash(git add *)"
+    ]
+  }
+}
