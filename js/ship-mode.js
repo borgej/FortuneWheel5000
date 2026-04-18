@@ -802,7 +802,7 @@ class ShipWheelMode {
       const item = document.createElement('div');
       item.className = 'ship-history-item';
       item.innerHTML = `
-        <span class="ship-history-tier">T${this._roman(s.tier)}</span>
+        <span class="ship-history-tier">${this._roman(s.tier)}</span>
         <span class="ship-history-name">${s.name}</span>
         <span class="ship-history-meta">${WoWS.SHIP_TYPE_LABELS[s.type] || s.type} · ${WoWS.NATION_LABELS[s.nation] || s.nation}</span>`;
       list.appendChild(item);
