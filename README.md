@@ -29,8 +29,18 @@ Open it in your browser and start spinning. Nothing to install, nothing to sign 
 - OBS browser source friendly: `?autoconnect=1&channel=name&keyword=!wheel` URL params
 - `!me` chat command as an alternative join trigger
 
+<img width="2554" height="1321" alt="image" src="https://github.com/user-attachments/assets/531c678a-78da-4ab7-8320-62af160a24a8" />
+<img width="1841" height="1188" alt="image1" src="https://github.com/user-attachments/assets/c34ca34a-7853-42b5-8a4a-ae53157e19a8" />
+<img width="2043" height="1281" alt="image2" src="https://github.com/user-attachments/assets/3fee1732-702e-499b-b1b3-763c5ef7100c" />
+<img width="2554" height="1286" alt="image3" src="https://github.com/user-attachments/assets/e8dd34e9-955b-425a-a175-3e28ba3c95d3" />
+<img width="2552" height="1277" alt="image4" src="https://github.com/user-attachments/assets/3b0c9843-ba29-43a2-b852-c871dd02713f" />
+<img width="2554" height="1281" alt="image5" src="https://github.com/user-attachments/assets/a4d3cbc0-086b-4bec-9c65-9f603d7b828c" />
+<img width="1229" height="1257" alt="image6" src="https://github.com/user-attachments/assets/1c542ef9-bf90-48de-a581-780df6c5c039" />
+
 ### ⚓ World of Warships — Random Ship Selector
 Pick a random ship from your own port to play next — great for challenge runs, stream variety, or just leaving it up to fate.
+
+https://github.com/user-attachments/assets/9b7ef1f0-e725-4f92-a86e-4733673911ec
 
 - **Log in with Wargaming** (OAuth) to see only ships currently in your port, or enter your account ID / username to search from all ships ever played
 - Supports all regions: EU, NA, Asia, RU
@@ -43,18 +53,11 @@ Pick a random ship from your own port to play next — great for challenge runs,
 - Spin history sidebar for the current session
 - Colour palette picker for the wheel
 
-<img width="2221" height="1322" alt="image" src="https://github.com/user-attachments/assets/2d49492b-bd6d-4e37-9f0a-e4224e8584a9" />
-<img width="2226" height="1317" alt="image" src="https://github.com/user-attachments/assets/caafd0f5-72bd-4c14-9def-06ff09494ed8" />
-<img width="2230" height="1317" alt="image" src="https://github.com/user-attachments/assets/942fe939-43fc-4649-9670-ce8cc4c9e652" />
-<img width="2231" height="1321" alt="image" src="https://github.com/user-attachments/assets/67995ac0-039c-4d1a-a002-bd8a7786321f" />
-<img width="2237" height="1318" alt="image" src="https://github.com/user-attachments/assets/a0d809d6-b1b2-4b44-bb40-08ac0c9d4f03" />
-<img width="2233" height="1324" alt="image" src="https://github.com/user-attachments/assets/a718906d-ed97-4aa9-b298-44f15d3c4ec7" />
-<img width="2232" height="1325" alt="image" src="https://github.com/user-attachments/assets/ceb406ac-9738-4463-a0dd-b1bb8d218c5e" />
-<img width="2229" height="1325" alt="image" src="https://github.com/user-attachments/assets/b6d12505-24d6-4f68-ae40-8e406428dc45" />
 
 ## Green screen / chromakey mode
-<img width="2231" height="1323" alt="image" src="https://github.com/user-attachments/assets/e402b649-38f9-42b1-af01-e7da938c8601" />
-<img width="2229" height="1321" alt="image" src="https://github.com/user-attachments/assets/b4fb9575-bf5e-4efa-a6dd-c8bbc748afba" />
+- OBS chromakey possibilities
+<img width="2515" height="1284" alt="image" src="https://github.com/user-attachments/assets/3586bf98-cd9f-42af-b3c1-843712796d70" />
+
 
 ## Running locally
 
