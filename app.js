@@ -110,7 +110,7 @@ class TwitchGiveawayApp {
       confirmMessage: document.getElementById('confirmMessage'),
       confirmYes: document.getElementById('confirmYes'),
       confirmNo: document.getElementById('confirmNo'),
-  // spin controls removed from UI; config via APP_CONFIG
+      exitGreenScreenBtn: document.getElementById('exitGreenScreenBtn'),
     };
 
     this.bindEvents();
@@ -128,27 +128,7 @@ class TwitchGiveawayApp {
 
     try {
       const row = document.getElementById('donateRow');
-      const link = document.getElementById('donateLink');
-      const label = document.getElementById('donateLabel');
-      if (row && link && label) {
-        if (!APP_CONFIG.donate || APP_CONFIG.donate.enabled === false) {
-          row.style.display = 'none';
-        } else {
-          if (APP_CONFIG.donate.url) link.href = APP_CONFIG.donate.url;
-          if (APP_CONFIG.donate.label) label.textContent = APP_CONFIG.donate.label;
-          // Allow user to hide the donate box manually and remember preference
-          const closeBtn = document.getElementById('donateClose');
-          const hiddenPref = mwGetCookie('mw.donateHidden') === '1' || localStorage.getItem('mw.donateHidden') === '1';
-          if (hiddenPref) { row.style.display = 'none'; }
-          if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-              row.style.display = 'none';
-              mwSetCookie('mw.donateHidden', '1', 365);
-              try { localStorage.removeItem('mw.donateHidden'); } catch {}
-            });
-          }
-        }
-      }
+      if (row && APP_CONFIG.donate?.enabled === false) row.style.display = 'none';
       const addBtn = document.getElementById('debugAddBtn');
     } catch {}
     const ch = document.getElementById('clearHistoryBtn');
@@ -208,6 +188,7 @@ class TwitchGiveawayApp {
   if (this.elements.removeNonFollowersBtn) this.elements.removeNonFollowersBtn.addEventListener('click', () => this.removeNonFollowers());
   if (this.elements.removeNonSubscribersBtn) this.elements.removeNonSubscribersBtn.addEventListener('click', () => this.removeNonSubscribers());
     if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
+    if (this.elements.exitGreenScreenBtn) this.elements.exitGreenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
     this.elements.winnerModal.addEventListener('click', (e) => { /* backdrop click disabled — use buttons to close */ });
@@ -478,7 +459,7 @@ class TwitchGiveawayApp {
     const isLarge = document.body.classList.toggle('wheel-large');
     if (this.elements.wheelSizeBtn) {
       this.elements.wheelSizeBtn.title = isLarge ? 'Smaller wheel' : 'Bigger wheel';
-      this.elements.wheelSizeBtn.textContent = isLarge ? '⤡' : '⤢';
+      this.elements.wheelSizeBtn.innerHTML = isLarge ? '<i class="fa-solid fa-compress"></i>' : '<i class="fa-solid fa-expand"></i>';
     }
     localStorage.setItem('mw.wheelLarge', isLarge ? '1' : '0');
     mwSetCookie('mw.wheelLarge', isLarge ? '1' : '0', 365);
@@ -489,6 +470,7 @@ class TwitchGiveawayApp {
   }
 
   updateConnectionPanelForAuth() {
+    this.updateGiveawayVisibility();
     const authed = !!this.accessToken;
     // Hide channel input + Auth button when already authorized
     const channelGroup = document.getElementById('channelInputGroup');
@@ -802,6 +784,12 @@ class TwitchGiveawayApp {
   updateConnectionButtons() {
     this.elements.connectBtn.style.display = this.isConnected ? 'none' : 'inline-block';
     this.elements.disconnectBtn.style.display = this.isConnected ? 'inline-block' : 'none';
+    this.updateGiveawayVisibility();
+  }
+
+  updateGiveawayVisibility() {
+    const panel = document.getElementById('giveawayOptions');
+    if (panel) panel.style.display = (this.isConnected || !!this.accessToken) ? '' : 'none';
   }
   collapseConnectionPanel() {
     if (!this.elements.connectionPanel) return;
@@ -1607,7 +1595,7 @@ class TwitchGiveawayApp {
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     const faces = Array.from({length: 20}, ()=>({ x: Math.random()*canvas.width, y: -20 - Math.random()*canvas.height*0.5, vy: 2+Math.random()*2.5, size: 24+Math.random()*18, spin: Math.random()*Math.PI, vr: -0.05 + Math.random()*0.1, alpha: 0.85 }));
-    const sad = '😢';
+    const sad = '☹';
     const hasDuration = typeof durationMs === 'number' && durationMs > 0;
     const endAt = hasDuration ? (Date.now() + durationMs) : Number.POSITIVE_INFINITY;
     this.sadStopRequested = false;

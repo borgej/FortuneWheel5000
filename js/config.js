@@ -3,16 +3,12 @@ const APP_CONFIG = {
   // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
   enableFollowerInfo: true,
   clientId: '__TWITCH_CLIENT_ID__',
-  // Wargaming application ID — must be "Mobile" type (no IP restriction) for browser use
-  wowsAppId: '__WOWS_APP_ID__',
-  version: 'v1.1',
+  version: 'v1.4',
   // Explicit redirect URI — must match exactly what is registered in dev.twitch.tv.
   // Set to null to use window.location.origin + pathname automatically (local dev).
   redirectUri: 'https://www.bjsolutions.no/FortuneWheel5000',
   donate: {
     enabled: true,
-    url: 'https://paypal.me/borgej',
-    label: 'Donate'
   },
   // Set to false when you dont want to test anymore
   ui: {
