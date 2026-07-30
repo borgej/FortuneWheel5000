@@ -176,6 +176,14 @@ body.wheel-zoom .wheel-pointer {
   background: linear-gradient(270deg, #fef08a 0%, #facc15 45%, #b45309 100%);
   clip-path: polygon(100% 50%, 0 0, 0 100%);
 }
+/* No wheel yet — the placeholder is always a plain centred circle, so the
+   pointer stays put at its full-view spot instead of chasing a zoom layout
+   that isn't actually being drawn. */
+body.wheel-zoom.wheel-empty .wheel-pointer {
+  right: -26px; left: auto; width: 52px;
+  background: linear-gradient(90deg, #fef08a 0%, #facc15 45%, #b45309 100%);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
 body.wheel-zoom .wheel {
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.45);
@@ -466,6 +474,17 @@ body.greenscreen .wheel { box-shadow: none !important; }
 body.greenscreen .wheel-pointer { box-shadow: none !important; filter: none !important; }
 body.greenscreen .winner-announcement { background: transparent !important; backdrop-filter: none !important; }
 body.greenscreen #exitGreenScreenBtn { background: rgba(0,255,0,0.15); border-color: rgba(0,0,0,0.3); color: #111; }
+/* Pure chroma green washes out button colour/contrast, so give every control
+   near the wheel a dark outline + shadow to stay readable against it. */
+body.greenscreen .giveaway-controls button {
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+body.greenscreen .giveaway-controls button.btn-secondary {
+  background: rgba(15,15,15,0.75);
+  color: #fff;
+  border-color: rgba(0,0,0,0.5);
+}
 /* Confirm dialogs (Start/Stop Giveaway, Clear) must stay off the wheel itself —
    streamers crop their capture to just the wheel, so park the dialog where the
    left menu normally lives instead of dead-centre. */

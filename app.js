@@ -1320,6 +1320,10 @@ class TwitchGiveawayApp {
     let names = allNames;
     if (this.tempExclusions && this.tempExclusions.size) names = names.filter(n => !this.tempExclusions.has(n));
     if (this.excludedWinners && this.excludedWinners.size) names = names.filter(n => !this.excludedWinners.has(n));
+    // The empty-wheel placeholder is always a plain centred circle — it never
+    // draws the zoomed/magnified arc a real wheel would — so keep the pointer
+    // at its full-view spot regardless of the selected view mode while empty.
+    document.body.classList.toggle('wheel-empty', names.length === 0);
     if (names.length === 0) {
       el.className = 'empty-wheel';
       el.style.transform = 'rotate(0deg)';
