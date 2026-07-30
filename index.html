@@ -26,7 +26,7 @@
     gtag('js', new Date());
     gtag('config', '__GA_MEASUREMENT_ID__');
   </script>
-  <link rel="stylesheet" href="./styles.css?v=2.0" />
+  <link rel="stylesheet" href="./styles.css?v=2.4" />
   <script>(function(){var t=localStorage.getItem('mw.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})()</script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
@@ -109,7 +109,7 @@
               <label class="toggle" title="Announce the winner in chat — requires Twitch authorization">
                 <input id="winnerMsgToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-trophy"></i></span> Announce winner
               </label>
-              <label class="toggle" title="Randomly trigger fun bonus effects when spinning — screen shake, jackpots, glitches and more. Pick exactly which effects are active below.">
+              <label class="toggle" title="Randomly trigger fun bonus effects when spinning — screen shake, turbo spins, glitches and more. Pick exactly which effects are active below.">
                 <input id="chaosModeToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-dice"></i></span> Chaos mode
               </label>
             </div>
@@ -137,12 +137,6 @@
               <label class="toggle" title="Replace the tick sound with a random goofy variant each spin (laser, boing, cowbell, crescendo)">
                 <input id="chaosTickToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-volume-high"></i></span> Silly tick sounds
               </label>
-              <label class="toggle" title="Give the wheel a random cosmetic colour skin for the spin">
-                <input id="chaosSkinToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-palette"></i></span> Skin of the day
-              </label>
-              <label class="toggle" title="Randomize the win celebration — confetti burst, emoji, money or fire instead of the same confetti every time">
-                <input id="chaosRainToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-cloud-rain"></i></span> Themed win effects
-              </label>
               <label class="toggle" title="Winner's avatar gets a sparkly bounce-in entrance">
                 <input id="chaosTrophyToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-trophy"></i></span> Trophy entrance
               </label>
@@ -155,22 +149,13 @@
               <label class="toggle" title="Add a random funny one-liner about the winner">
                 <input id="chaosOneLinerToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-comment-dots"></i></span> Winner one-liners
               </label>
-              <label class="toggle" title="Every winner gets a random rarity tier (Common to Legendary) — landing Legendary triggers a jackpot celebration">
-                <input id="chaosRarityToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-gem"></i></span> Rarity &amp; jackpots
-              </label>
-              <label class="toggle" title="Add a silly (optional) condition for claiming the prize">
-                <input id="chaosCurseToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-hat-wizard"></i></span> Claim conditions
-              </label>
             </div>
             <div class="chaos-subgroup-title">Random surprises</div>
             <div class="toggle-group chaos-toggle-list">
-              <label class="toggle" title="Occasionally fake out with a false start before the real spin begins">
-                <input id="chaosFalseStartToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-hand"></i></span> False start
-              </label>
               <label class="toggle" title="Occasionally spin at nitro speed">
                 <input id="chaosTurboToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-gauge-high"></i></span> Turbo spin
               </label>
-              <label class="toggle" title="Occasionally dim everything but the wheel while it spins">
+              <label class="toggle" title="Occasionally highlight just the current slice's name in a small tag right at the arrow while it spins">
                 <input id="chaosSpotlightToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-lightbulb"></i></span> Spotlight mode
               </label>
               <label class="toggle" title="Occasionally throw in a fake system-error glitch for a second">
@@ -214,11 +199,14 @@
         <div id="entryOverlay" class="entry-overlay" aria-live="polite"></div>
         <div id="chaosChatLayer" class="chaos-chat-layer"></div>
         <div id="chaosIndicator" class="chaos-indicator"></div>
+        <div id="chaosSpotlightTag" class="chaos-spotlight-tag"></div>
       </div>
 <div id="wheelInfo" style="opacity:.9;font-size:12px;margin-top:4px"></div>
       <div id="entryInfo" style="opacity:.9;font-size:12px;margin-top:2px"></div>
       <div class="giveaway-controls">
         <button id="spinBtn" class="btn-primary" disabled>Spin the Wheel</button>
+        <button id="gsGiveawayBtn" class="btn-secondary" title="Open entries (or stop the current giveaway)">Start Giveaway</button>
+        <button id="gsClearBtn" class="btn-danger" title="Clear all participants and reset the wheel">Clear</button>
         <button id="wheelSizeBtn" class="btn-secondary" title="Toggle wheel size"><i class="fa-solid fa-expand"></i></button>
         <button id="wheelViewBtn" class="btn-secondary" title="Section view — fewer, bigger names"><i class="fa-solid fa-circle-half-stroke"></i></button>
         <button id="exitGreenScreenBtn" class="btn-secondary" title="Toggle green screen mode"><i class="fa-solid fa-display"></i></button>
@@ -256,13 +244,11 @@
 
   <div id="winnerModal" class="winner-announcement">
     <div class="winner-card" id="winnerCard">
-      <div id="winnerRarityBadge" class="chaos-rarity-badge" style="display:none"></div>
       <h2>Winner</h2>
       <img id="winnerAvatar" class="winner-avatar" src="" alt="" style="display:none" />
       <div id="winnerName" class="winner-name"></div>
       <div id="winnerMeta" style="margin-bottom:12px;font-weight:600"></div>
       <div id="winnerOneLiner" class="chaos-oneliner" style="display:none"></div>
-      <div id="winnerCurse" class="chaos-curse" style="display:none"></div>
       <div id="winnerTimer" style="font-weight:800;margin-bottom:8px">00:00</div>
       <div class="progress" style="margin-bottom:10px;">
         <div id="winnerProgress" class="progress-bar" aria-label="Time remaining"></div>
@@ -276,7 +262,6 @@
   </div>
 
   <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:1500"></canvas>
-  <div id="chaosSpotlight" class="chaos-spotlight-overlay"></div>
   <div id="chaosOverlay" class="chaos-overlay"></div>
   <div id="toastContainer" style="position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:2000"></div>
 
@@ -330,8 +315,8 @@
     </div>
   </div>
 
-  <script src="./js/tmi-loader.js?v=2.0"></script>
-  <script src="./js/cookies.js?v=2.0"></script>
+  <script src="./js/tmi-loader.js?v=2.4"></script>
+  <script src="./js/cookies.js?v=2.4"></script>
   <script>
     (function() {
       var btn = document.getElementById('themeSwitchBtn');
@@ -349,11 +334,11 @@
       });
     })();
   </script>
-  <script src="./js/config.js?v=2.0"></script>
-  <script src="./js/wheel.js?v=2.0"></script>
-  <script src="./js/chaos.js?v=2.0"></script>
-  <script src="./js/twitch-chat.js?v=2.0"></script>
-  <script src="./app.js?v=2.0"></script>
-  <script src="./js/consent.js?v=2.0"></script>
+  <script src="./js/config.js?v=2.4"></script>
+  <script src="./js/wheel.js?v=2.4"></script>
+  <script src="./js/chaos.js?v=2.4"></script>
+  <script src="./js/twitch-chat.js?v=2.4"></script>
+  <script src="./app.js?v=2.4"></script>
+  <script src="./js/consent.js?v=2.4"></script>
 </body>
 </html>

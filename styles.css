@@ -466,6 +466,10 @@ body.greenscreen .wheel { box-shadow: none !important; }
 body.greenscreen .wheel-pointer { box-shadow: none !important; filter: none !important; }
 body.greenscreen .winner-announcement { background: transparent !important; backdrop-filter: none !important; }
 body.greenscreen #exitGreenScreenBtn { background: rgba(0,255,0,0.15); border-color: rgba(0,0,0,0.3); color: #111; }
+/* Confirm dialogs (Start/Stop Giveaway, Clear) must stay off the wheel itself —
+   streamers crop their capture to just the wheel, so park the dialog where the
+   left menu normally lives instead of dead-centre. */
+body.greenscreen #confirmModal .winner-card { margin: 24px; min-width: 0 !important; max-width: 260px !important; }
 
 /* ============================= Chaos Mode ============================= */
 .chaos-details { margin-top: 8px; }
@@ -506,9 +510,28 @@ body.greenscreen #exitGreenScreenBtn { background: rgba(0,255,0,0.15); border-co
 /* Turbo spin motion blur */
 .chaos-turbo-blur .wheel { filter: blur(1.5px) saturate(1.3); }
 
-/* Spotlight */
-.chaos-spotlight-overlay { position: fixed; inset: 0; z-index: 1550; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; background: radial-gradient(circle at var(--cx,50%) var(--cy,50%), transparent 0, transparent var(--r,220px), rgba(0,0,0,0.82) var(--r2,420px)); }
-body.chaos-spotlight-on .chaos-spotlight-overlay { opacity: 1; }
+/* Spotlight — a small glowing name-tag right at the pointer, not a full dim */
+.chaos-spotlight-tag {
+  position: absolute; top: 50%; left: 100%; margin-left: 14px;
+  transform: translateY(-50%) scale(0.85);
+  opacity: 0;
+  background: rgba(20,10,30,0.85);
+  border: 1px solid rgba(190,130,255,0.5);
+  color: #fff;
+  font-weight: 900;
+  font-size: 15px;
+  padding: 7px 16px;
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 11;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4), 0 0 16px rgba(190,130,255,0.4);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.chaos-spotlight-tag--show { opacity: 1; transform: translateY(-50%) scale(1); }
+body.wheel-zoom .chaos-spotlight-tag { left: auto; right: 100%; margin-left: 0; margin-right: 14px; }
+@keyframes chaosSpotlightPulse { 0% { transform: translateY(-50%) scale(1.18); } 100% { transform: translateY(-50%) scale(1); } }
+.chaos-spotlight-tag--pulse { animation: chaosSpotlightPulse 0.18s ease-out; }
 
 /* Glitch */
 .chaos-glitch-flicker { position: fixed; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,0,120,0.08) 0 2px, rgba(0,255,255,0.06) 2px 4px, transparent 4px 6px); mix-blend-mode: screen; animation: chaosGlitchFlicker 0.09s steps(2) infinite; pointer-events: none; z-index: 1; }
@@ -533,18 +556,7 @@ body.chaos-spotlight-on .chaos-spotlight-overlay { opacity: 1; }
 
 /* Winner-card decorations */
 #winnerCard { position: relative; }
-.chaos-rarity-badge { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 900; letter-spacing: 0.5px; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; }
-.chaos-rarity-common { background: rgba(148,163,184,0.2); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.4); }
-.chaos-rarity-rare { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.4); }
-.chaos-rarity-epic { background: rgba(168,85,247,0.22); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.45); }
-.chaos-rarity-legendary { background: linear-gradient(90deg,#ffd700,#ff8c00,#ff2fb1,#8b5cf6,#ffd700); background-size: 300% 100%; color: #1a1008; border: 1px solid rgba(255,215,0,0.6); animation: chaosRarityShimmer 1.6s linear infinite; }
-@keyframes chaosRarityShimmer { to { background-position: 300% 0; } }
-.chaos-rarity-glow-rare { box-shadow: 0 20px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,100,50,0.2) inset, 0 0 40px rgba(59,130,246,0.35); }
-.chaos-rarity-glow-epic { box-shadow: 0 20px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,100,50,0.2) inset, 0 0 50px rgba(168,85,247,0.45); }
-.chaos-rarity-glow-legendary { box-shadow: 0 20px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,215,0,0.3) inset, 0 0 70px rgba(255,215,0,0.55); }
-
-.chaos-oneliner, .chaos-curse { font-size: 12.5px; font-weight: 600; color: var(--text-muted); font-style: italic; margin-top: -6px; margin-bottom: 10px; }
-.chaos-curse { color: #d4915a; }
+.chaos-oneliner { font-size: 12.5px; font-weight: 600; color: var(--text-muted); font-style: italic; margin-top: -6px; margin-bottom: 10px; }
 
 /* Trophy entrance */
 @keyframes chaosTrophyBounce {

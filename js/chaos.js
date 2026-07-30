@@ -8,8 +8,6 @@ class ChaosEffects {
     this.audioCtx = null;
     this._chatBuffer = [];
     this._pendingChatTimers = [];
-    this._skinApplied = false;
-    this._originalWheelColors = null;
     this._spotlightActive = false;
     this._tickStyle = 'classic';
     this._tickCounter = 0;
@@ -208,24 +206,6 @@ class ChaosEffects {
     } catch {}
   }
 
-  _playScratch() {
-    try {
-      const ctx = this._ctx();
-      const t = ctx.currentTime;
-      const bufferSize = ctx.sampleRate * 0.25;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-      const noise = ctx.createBufferSource(); noise.buffer = buffer;
-      const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 1200;
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.12, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      noise.connect(filter); filter.connect(g); g.connect(ctx.destination);
-      noise.start(t);
-    } catch {}
-  }
-
   _suspenseBlip() {
     try {
       const ctx = this._ctx();
@@ -295,25 +275,31 @@ class ChaosEffects {
   }
 
   // ---------------------------------------------------------------------
-  // Spotlight
+  // Spotlight — a small glowing name-tag anchored right at the pointer,
+  // updated on every tick with whichever name it's currently pointing at.
   // ---------------------------------------------------------------------
   startSpotlight() {
-    const overlay = document.getElementById('chaosSpotlight');
-    const stage = document.querySelector('.wheel-stage');
-    if (!overlay || !stage) return;
-    const r = stage.getBoundingClientRect();
-    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    overlay.style.setProperty('--cx', cx + 'px');
-    overlay.style.setProperty('--cy', cy + 'px');
-    overlay.style.setProperty('--r', Math.max(r.width, r.height) * 0.52 + 'px');
-    overlay.style.setProperty('--r2', Math.max(r.width, r.height) * 0.9 + 'px');
-    document.body.classList.add('chaos-spotlight-on');
+    const el = document.getElementById('chaosSpotlightTag');
+    if (!el) return;
+    el.textContent = '';
+    el.classList.add('chaos-spotlight-tag--show');
     this._spotlightActive = true;
   }
 
+  updateSpotlightLabel(name) {
+    const el = document.getElementById('chaosSpotlightTag');
+    if (!el) return;
+    el.textContent = name;
+    el.classList.remove('chaos-spotlight-tag--pulse'); void el.offsetWidth;
+    el.classList.add('chaos-spotlight-tag--pulse');
+  }
+
+  isSpotlightActive() { return this._spotlightActive; }
+
   stopSpotlight() {
     if (!this._spotlightActive) return;
-    document.body.classList.remove('chaos-spotlight-on');
+    const el = document.getElementById('chaosSpotlightTag');
+    if (el) el.classList.remove('chaos-spotlight-tag--show');
     this._spotlightActive = false;
   }
 
@@ -339,93 +325,6 @@ class ChaosEffects {
       if (err) err.remove();
       if (done) done();
     }, 700);
-  }
-
-  // ---------------------------------------------------------------------
-  // Themed win-effect rain — reuses the existing confetti canvas & stop flag
-  // ---------------------------------------------------------------------
-  launchThemedRain(forceTheme) {
-    const canvas = document.getElementById('confettiCanvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const theme = forceTheme || this._pickFrom(['confettiBurst', 'emoji', 'money', 'fire']);
-    const totalSec = this.app.winnerTotalSeconds ?? Math.max(0, Math.floor((this.app.winnerTimerMinutes || 0) * 60));
-    const endAt = totalSec > 0 ? (Date.now() + totalSec * 1000) : Number.POSITIVE_INFINITY;
-    this.app.confettiStopRequested = false;
-
-    let parts, draw;
-    if (theme === 'emoji') {
-      const glyphs = ['🎉', '✨', '🥳', '⭐', '🔥'];
-      parts = Array.from({ length: 26 }, () => ({ x: Math.random() * canvas.width, y: -20 - Math.random() * canvas.height * 0.5, vy: 1.6 + Math.random() * 2.2, size: 22 + Math.random() * 20, spin: Math.random() * Math.PI, vr: -0.05 + Math.random() * 0.1, glyph: glyphs[Math.floor(Math.random() * glyphs.length)] }));
-      draw = (c, p) => { c.save(); c.translate(p.x, p.y); c.rotate(p.spin); c.font = `${p.size}px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(p.glyph, 0, 0); c.restore(); };
-    } else if (theme === 'money') {
-      parts = Array.from({ length: 40 }, () => ({ x: Math.random() * canvas.width, y: -20 - Math.random() * canvas.height * 0.5, vy: 1.8 + Math.random() * 2.6, vx: -1 + Math.random() * 2, size: 20 + Math.random() * 14, spin: Math.random() * Math.PI, vr: -0.15 + Math.random() * 0.3 }));
-      draw = (c, p) => { c.save(); c.translate(p.x, p.y); c.rotate(p.spin); c.font = `${p.size}px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💵', 0, 0); c.restore(); };
-    } else if (theme === 'fire') {
-      const colors = ['#ff6b00', '#ff9500', '#ffd000', '#ff3d00'];
-      parts = Array.from({ length: 70 }, () => ({ x: Math.random() * canvas.width, y: canvas.height + Math.random() * 40, vy: -(1.4 + Math.random() * 2.4), vx: -0.6 + Math.random() * 1.2, r: 3 + Math.random() * 5, c: colors[Math.floor(Math.random() * colors.length)], life: 0.6 + Math.random() * 0.4 }));
-      draw = (c, p) => { c.save(); c.globalAlpha = Math.max(0, p.life); c.fillStyle = p.c; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); c.restore(); };
-    } else {
-      const colors = ['#ff6b6b', '#feca57', '#54a0ff', '#5f27cd', '#1dd1a1', '#ff9ff3', '#f368e0'];
-      parts = Array.from({ length: 150 }, () => ({ x: Math.random() * canvas.width, y: -20 - Math.random() * canvas.height * 0.6, r: 3 + Math.random() * 5, c: colors[Math.floor(Math.random() * colors.length)], vx: -2.5 + Math.random() * 5, vy: 2 + Math.random() * 3.5, spin: Math.random() * Math.PI, vr: -0.25 + Math.random() * 0.5 }));
-      draw = (c, p) => { c.save(); c.translate(p.x, p.y); c.rotate(p.spin); c.fillStyle = p.c; c.fillRect(-p.r, -p.r, p.r * 2, p.r * 2); c.restore(); };
-    }
-
-    const step = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const p of parts) {
-        if (theme === 'fire') {
-          p.x += p.vx; p.y += p.vy; p.life -= 0.008;
-          if (p.life <= 0 || p.y < -10) { p.y = canvas.height + Math.random() * 20; p.x = Math.random() * canvas.width; p.life = 0.6 + Math.random() * 0.4; }
-        } else {
-          p.x += (p.vx || 0); p.y += p.vy; p.spin = (p.spin || 0) + (p.vr || 0);
-          if (p.y > canvas.height + 20) { p.y = -10; p.x = Math.random() * canvas.width; }
-        }
-        draw(ctx, p);
-      }
-      if (Date.now() < endAt && !this.app.confettiStopRequested) requestAnimationFrame(step); else ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-    requestAnimationFrame(step);
-  }
-
-  shouldVaryRain() { return this.isEnabled('rain'); }
-
-  // ---------------------------------------------------------------------
-  // Skin of the day — temporarily recolors the wheel for one spin
-  // ---------------------------------------------------------------------
-  applySpinSkin() {
-    if (!this.isEnabled('skin') || !this.app.wheel || !Array.isArray(this.app.wheel.items) || !this.app.wheel.items.length) { this._skinApplied = false; return false; }
-    const items = this.app.wheel.items;
-    this._originalWheelColors = items.map((it) => ({ backgroundColor: it.backgroundColor, labelColor: it.labelColor }));
-    this._originalMetallic = this.app.wheel.metallic;
-    const alt = WHEEL_PALETTES.filter((_, i) => i !== this.app.wheelPaletteIndex);
-    const paletteObj = this._pickFrom(alt.length ? alt : WHEEL_PALETTES);
-    const palette = paletteObj.colors;
-    const pickTextColor = (hex) => {
-      const h = hex.replace('#', '');
-      const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
-      const luminance = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
-      return luminance > 0.6 ? '#111827' : '#f9fafb';
-    };
-    const skinned = items.map((it, i) => ({ ...it, backgroundColor: palette[i % palette.length], labelColor: pickTextColor(palette[i % palette.length]) }));
-    this.app.wheel.setItems(skinned);
-    this.app.wheel.setMetallic(paletteObj.name === 'Majorpar v2');
-    this.app._applyThemeClass(paletteObj.name);
-    this._skinApplied = true;
-    return true;
-  }
-
-  restoreSkin() {
-    if (!this._skinApplied || !this.app.wheel || !this._originalWheelColors) { this._skinApplied = false; return; }
-    const items = this.app.wheel.items;
-    const restored = items.map((it, i) => ({ ...it, ...(this._originalWheelColors[i] || {}) }));
-    this.app.wheel.setItems(restored);
-    this.app.wheel.setMetallic(this._originalMetallic);
-    const basePalette = WHEEL_PALETTES[this.app.wheelPaletteIndex] || WHEEL_PALETTES[0];
-    this.app._applyThemeClass(basePalette.name);
-    this._skinApplied = false;
-    this._originalWheelColors = null;
   }
 
   // ---------------------------------------------------------------------
@@ -469,43 +368,8 @@ class ChaosEffects {
   }
 
   // ---------------------------------------------------------------------
-  // Winner-card decorations: rarity/jackpot, trophy entrance, one-liner, curse
+  // Winner-card decorations: trophy entrance, one-liner
   // ---------------------------------------------------------------------
-  _rollRarityTier() {
-    const r = Math.random();
-    if (r < 0.05) return 'legendary';
-    if (r < 0.17) return 'epic';
-    if (r < 0.45) return 'rare';
-    return 'common';
-  }
-
-  _rarityMeta(tier) {
-    return {
-      common: { label: 'Common', emoji: '⚪' },
-      rare: { label: 'Rare', emoji: '🔵' },
-      epic: { label: 'Epic', emoji: '🟣' },
-      legendary: { label: 'LEGENDARY', emoji: '🌟' },
-    }[tier];
-  }
-
-  applyRarityBadge() {
-    const badge = document.getElementById('winnerRarityBadge');
-    const card = document.getElementById('winnerCard');
-    if (!badge || !card) return null;
-    const tier = this._rollRarityTier();
-    const meta = this._rarityMeta(tier);
-    badge.textContent = `${meta.emoji} ${meta.label}`;
-    badge.className = `chaos-rarity-badge chaos-rarity-${tier}`;
-    badge.style.display = '';
-    card.classList.add(`chaos-rarity-glow-${tier}`);
-    return tier;
-  }
-
-  triggerJackpot() {
-    this.showBanner('JACKPOT!', { variant: 'gold', durationMs: 1700, sub: 'Legendary winner!' });
-    if (this.app.enableConfetti) this.launchThemedRain('confettiBurst');
-  }
-
   applyTrophyEntrance() {
     const card = document.getElementById('winnerCard');
     if (!card) return;
@@ -534,41 +398,16 @@ class ChaosEffects {
     el.style.display = '';
   }
 
-  _curseLines() {
-    return [
-      'Claim your prize while doing your best robot dance.',
-      'Must type the prize name IN ALL CAPS to claim.',
-      'Claim window shortened by 10 seconds. Chop chop.',
-      'Must say "thank you wheel" in chat to claim.',
-      'Prize can only be claimed while typing with your elbows. (Kidding. Mostly.)',
-      'Bonus points if you claim it in an accent.',
-    ];
-  }
-
-  applyCurse() {
-    const el = document.getElementById('winnerCurse');
-    if (!el) return;
-    el.textContent = '🎲 ' + this._pickFrom(this._curseLines());
-    el.style.display = '';
-  }
-
   _resetWinnerDecorations() {
-    const badge = document.getElementById('winnerRarityBadge'); if (badge) badge.style.display = 'none';
     const oneLiner = document.getElementById('winnerOneLiner'); if (oneLiner) oneLiner.style.display = 'none';
-    const curse = document.getElementById('winnerCurse'); if (curse) curse.style.display = 'none';
     const card = document.getElementById('winnerCard');
-    if (card) card.classList.remove('chaos-rarity-glow-common', 'chaos-rarity-glow-rare', 'chaos-rarity-glow-epic', 'chaos-rarity-glow-legendary', 'chaos-trophy-in');
+    if (card) card.classList.remove('chaos-trophy-in');
   }
 
   decorateWinnerCard(winner) {
     this._resetWinnerDecorations();
-    if (this.isEnabled('rarity')) {
-      const tier = this.applyRarityBadge();
-      if (tier === 'legendary') this.triggerJackpot();
-    }
     if (this.isEnabled('trophy')) this.applyTrophyEntrance();
     if (this.isEnabled('oneLiner')) this.applyOneLiner(winner);
-    if (this.isEnabled('curse')) this.applyCurse();
   }
 
   // ---------------------------------------------------------------------
@@ -595,11 +434,9 @@ class ChaosEffects {
   // ---------------------------------------------------------------------
   runPreSpinSequence(spinOptions, startCallback) {
     this._pickTickStyleForSpin();
-    this.applySpinSkin();
     if (!this.enabled) { startCallback(spinOptions); return; }
     this.showChaosIndicator();
     const pool = [];
-    if (this.isEnabled('falseStart')) pool.push({ key: 'falseStart', label: 'False Start' });
     if (this.isEnabled('turbo')) pool.push({ key: 'turbo', label: 'Turbo Spin' });
     if (this.isEnabled('spotlight')) pool.push({ key: 'spotlight', label: 'Spotlight Mode' });
     if (this.isEnabled('glitch')) pool.push({ key: 'glitch', label: 'System Glitch' });
@@ -607,11 +444,7 @@ class ChaosEffects {
     if (!pool.length || !this._rollFrequency()) { startCallback(spinOptions); return; }
     const gag = this._pickFrom(pool);
     this.showChaosIndicator(gag.label);
-    if (gag.key === 'falseStart') {
-      this.showBanner('Wait for it...', { variant: 'warn', durationMs: 700 });
-      this._playScratch();
-      setTimeout(() => startCallback(spinOptions), 750);
-    } else if (gag.key === 'turbo') {
+    if (gag.key === 'turbo') {
       spinOptions.ms = Math.max(1200, Math.round(spinOptions.ms * 0.45));
       spinOptions.revolutions = (spinOptions.revolutions || 5) + 4;
       this.showBanner('NITRO SPIN!', { variant: 'gold', durationMs: 900 });
@@ -639,7 +472,6 @@ class ChaosEffects {
     this.stopSpotlight();
     this._clearChatBubbles();
     if (this.isEnabled('impact')) { this.zoomPunch(); this.shakeStage(); }
-    this.restoreSkin();
     const finish = () => {
       cb(winner);
       this.decorateWinnerCard(winner);
@@ -654,6 +486,6 @@ class ChaosEffects {
 }
 
 ChaosEffects.SETTINGS_KEYS = [
-  'tick', 'skin', 'rain', 'trophy', 'impact', 'stinger', 'oneLiner', 'rarity', 'curse',
-  'falseStart', 'turbo', 'spotlight', 'glitch', 'chatBubbles', 'mysteryBox',
+  'tick', 'trophy', 'impact', 'stinger', 'oneLiner',
+  'turbo', 'spotlight', 'glitch', 'chatBubbles', 'mysteryBox',
 ];

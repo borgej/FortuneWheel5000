@@ -114,6 +114,8 @@ class TwitchGiveawayApp {
       confirmYes: document.getElementById('confirmYes'),
       confirmNo: document.getElementById('confirmNo'),
       exitGreenScreenBtn: document.getElementById('exitGreenScreenBtn'),
+      gsGiveawayBtn: document.getElementById('gsGiveawayBtn'),
+      gsClearBtn: document.getElementById('gsClearBtn'),
     };
 
     this.chaos = new ChaosEffects(this);
@@ -187,6 +189,8 @@ class TwitchGiveawayApp {
     this.elements.spinBtn.addEventListener('click', () => this.spinWheel());
   if (this.elements.clearBtn) this.elements.clearBtn.addEventListener('click', () => this.clearParticipants());
   if (this.elements.clearGiveawayBtn) this.elements.clearGiveawayBtn.addEventListener('click', () => this.clearParticipants());
+  if (this.elements.gsGiveawayBtn) this.elements.gsGiveawayBtn.addEventListener('click', () => this.toggleGiveaway());
+  if (this.elements.gsClearBtn) this.elements.gsClearBtn.addEventListener('click', () => this.clearParticipants());
   if (this.elements.paletteBtn) this.elements.paletteBtn.addEventListener('click', () => this.openPaletteModal());
   if (this.elements.paletteModal) this.elements.paletteModal.addEventListener('click', (e) => { if (e.target === this.elements.paletteModal) this.closePaletteModal(); });
   const closePaletteBtn = document.getElementById('closePaletteBtn');
@@ -866,6 +870,16 @@ class TwitchGiveawayApp {
     this.startGiveaway();
   }
 
+  _setGiveawayButtonState(active) {
+    const label = active ? 'Stop Giveaway' : 'Start Giveaway';
+    [this.elements.startGiveawayBtn, this.elements.gsGiveawayBtn].forEach((btn) => {
+      if (!btn) return;
+      btn.textContent = label;
+      btn.classList.toggle('btn-danger', active);
+      btn.classList.toggle('btn-primary', !active);
+    });
+  }
+
   startGiveaway() {
     this.giveawayActive = true;
     this.excludedWinners = new Set();
@@ -879,9 +893,7 @@ class TwitchGiveawayApp {
   // reset layout offset for new session; will be randomized on first render
   this._layoutSessionMarker = null; this.layoutSliceOffset = 0;
     this.currentHistoryIndex = null;
-    this.elements.startGiveawayBtn.textContent = 'Stop Giveaway';
-    this.elements.startGiveawayBtn.classList.remove('btn-primary');
-    this.elements.startGiveawayBtn.classList.add('btn-danger');
+    this._setGiveawayButtonState(true);
     this.renderWheel();
     this._activateSidebarTab('participants');
     this._sendStartMessage();
@@ -899,9 +911,7 @@ class TwitchGiveawayApp {
       this.saveToStorage();
       this.renderHistory();
     }
-    this.elements.startGiveawayBtn.textContent = 'Start Giveaway';
-    this.elements.startGiveawayBtn.classList.remove('btn-danger');
-    this.elements.startGiveawayBtn.classList.add('btn-primary');
+    this._setGiveawayButtonState(false);
     if (this._debugTimeouts && this._debugTimeouts.length) { for (const id of this._debugTimeouts) { try { clearTimeout(id); } catch {} } this._debugTimeouts = []; }
   }
 
@@ -1400,7 +1410,17 @@ class TwitchGiveawayApp {
       viewMode: this.wheelViewMode,
       metallic: palette.name === 'Majorpar v2',
       onSpin: () => { this._lastTickStep = null; },
-      onCurrentIndexChange: (e) => { if (!this.enableTick) return; if (this._lastTickStep !== e.currentIndex) { this._lastTickStep = e.currentIndex; this.chaos.playTick(); } },
+      onCurrentIndexChange: (e) => {
+        if (this.enableTick && this._lastTickStep !== e.currentIndex) {
+          this._lastTickStep = e.currentIndex;
+          this.chaos.playTick();
+        }
+        if (this.chaos.isSpotlightActive() && Array.isArray(this.luckyNames) && this.luckyNames.length) {
+          const idx = Math.max(0, Math.min(e.currentIndex, this.luckyNames.length - 1));
+          const uname = this.luckyNames[idx];
+          this.chaos.updateSpotlightLabel(this.participants.get(uname)?.displayName || uname);
+        }
+      },
       onRest: (e) => {
         document.body.classList.remove('is-spinning');
         try {
@@ -1512,10 +1532,7 @@ class TwitchGiveawayApp {
     }
     this.elements.winnerModal.style.display = 'flex';
     this.startWinnerTimer();
-    if (this.enableConfetti) {
-      if (this.chaos && this.chaos.shouldVaryRain()) this.chaos.launchThemedRain();
-      else this.launchConfetti();
-    }
+    if (this.enableConfetti) this.launchConfetti();
     this._sendWinnerMessage(winner);
   }
 
@@ -1690,7 +1707,28 @@ class TwitchGiveawayApp {
     setTimeout(()=>{ wrap.style.transform='translateY(10px)'; wrap.style.opacity='0'; setTimeout(()=>{ wrap.remove(); }, 200); }, 3000);
   }
 
-  showConfirm(message, title='Please confirm') { return new Promise((resolve)=>{ this._confirmResolve = resolve; this.elements.confirmTitle.textContent = title; this.elements.confirmMessage.textContent = message; this.elements.confirmModal.style.display = 'flex'; }); }
+  showConfirm(message, title='Please confirm') { return new Promise((resolve)=>{ this._confirmResolve = resolve; this.elements.confirmTitle.textContent = title; this.elements.confirmMessage.textContent = message; this._positionConfirmForGreenScreen(); this.elements.confirmModal.style.display = 'flex'; }); }
+
+  // In green screen mode streamers crop their capture to just the wheel, so
+  // the confirm dialog must land wherever there's the most clear space around
+  // the wheel's actual rendered position — not a fixed corner that might not
+  // exist at their wheel size / viewport.
+  _positionConfirmForGreenScreen() {
+    const modal = this.elements.confirmModal;
+    const stage = document.querySelector('.wheel-stage');
+    if (!document.body.classList.contains('greenscreen') || !stage) {
+      modal.style.justifyContent = '';
+      modal.style.alignItems = '';
+      return;
+    }
+    const r = stage.getBoundingClientRect();
+    const spaceLeft = r.left;
+    const spaceRight = window.innerWidth - r.right;
+    const spaceTop = r.top;
+    const spaceBottom = window.innerHeight - r.bottom;
+    modal.style.justifyContent = spaceLeft >= spaceRight ? 'flex-start' : 'flex-end';
+    modal.style.alignItems = spaceTop >= spaceBottom ? 'flex-start' : 'flex-end';
+  }
   _resolveConfirm(val){ if (this._confirmResolve) this._confirmResolve(!!val); this._confirmResolve = null; this.elements.confirmModal.style.display = 'none'; }
 
   renderHistory() {
