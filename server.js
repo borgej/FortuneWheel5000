@@ -23,6 +23,15 @@ function injectSecrets(text) {
   return text;
 }
 
+// The ?v= cache-buster only changes on publish, so during local dev the browser
+// would happily keep serving the previous build. Tell it not to cache at all —
+// production already sends the same headers from web.config.
+const NO_CACHE = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+};
+
 const MIME = {
   '.html': 'text/html',
   '.js':   'application/javascript',
@@ -56,10 +65,10 @@ http.createServer((req, res) => {
     // Inject secrets into HTML and JS files at serve-time
     if (ext === '.html' || ext === '.js') {
       const injected = injectSecrets(data.toString('utf8'));
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': contentType, ...NO_CACHE });
       res.end(injected, 'utf8');
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': contentType, ...NO_CACHE });
       res.end(data);
     }
   });

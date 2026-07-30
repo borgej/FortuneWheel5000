@@ -48,6 +48,8 @@ class TwitchGiveawayApp {
   // Randomize slice orientation per session
   this._layoutSessionMarker = null;
   this.layoutSliceOffset = 0;
+  // 'full' = whole wheel, 'zoom' = magnified section with the pointer on the left
+  this.wheelViewMode = 'full';
   // Track if history was actually loaded to avoid overwriting with empty on first save
   this._historyLoaded = false;
 
@@ -76,6 +78,7 @@ class TwitchGiveawayApp {
   removeNonFollowersBtn: document.getElementById('removeNonFollowersBtn'),
       removeNonSubscribersBtn: document.getElementById('removeNonSubscribersBtn'),
       wheelSizeBtn: document.getElementById('wheelSizeBtn'),
+      wheelViewBtn: document.getElementById('wheelViewBtn'),
       participantsList: document.getElementById('participantsList'),
       participantCount: document.getElementById('participantCount'),
       historyList: document.getElementById('historyList'),
@@ -115,6 +118,7 @@ class TwitchGiveawayApp {
 
     this.bindEvents();
     this.restoreFromStorage();
+    this.setWheelViewMode(this.wheelViewMode, { save: false });
     this.applyUrlParams();
     this.checkForToken();
     this.updateConnectionPanelForAuth();
@@ -188,6 +192,7 @@ class TwitchGiveawayApp {
   if (this.elements.removeNonFollowersBtn) this.elements.removeNonFollowersBtn.addEventListener('click', () => this.removeNonFollowers());
   if (this.elements.removeNonSubscribersBtn) this.elements.removeNonSubscribersBtn.addEventListener('click', () => this.removeNonSubscribers());
     if (this.elements.wheelSizeBtn) this.elements.wheelSizeBtn.addEventListener('click', () => this.toggleWheelSize());
+    if (this.elements.wheelViewBtn) this.elements.wheelViewBtn.addEventListener('click', () => this.toggleWheelView());
     if (this.elements.exitGreenScreenBtn) this.elements.exitGreenScreenBtn.addEventListener('click', () => this.toggleGreenScreen());
     this.elements.closeWinnerBtn.addEventListener('click', () => this.closeWinnerModal());
     this.elements.reSpinBtn.addEventListener('click', () => this.reSpinExcludeCurrentWinner());
@@ -355,6 +360,7 @@ class TwitchGiveawayApp {
             if (this.elements.winnerMsgInput) this.elements.winnerMsgInput.value = s.winnerMsgText;
           }
           if (typeof s.wheelPaletteIndex === 'number' && s.wheelPaletteIndex >= 0 && s.wheelPaletteIndex < WHEEL_PALETTES.length) { this.wheelPaletteIndex = s.wheelPaletteIndex; }
+          if (s.wheelViewMode === 'zoom' || s.wheelViewMode === 'full') this.wheelViewMode = s.wheelViewMode;
           if (typeof s.greenScreen === 'boolean') {
             document.body.classList.toggle('greenscreen', !!s.greenScreen);
           }
@@ -430,6 +436,7 @@ class TwitchGiveawayApp {
         sendWinnerMsg: !!this.sendWinnerMsg,
         winnerMsgText: this.winnerMsgText || '',
         wheelPaletteIndex: this.wheelPaletteIndex || 0,
+        wheelViewMode: this.wheelViewMode || 'full',
       };
       mwSetCookie('mw.settings', settings, 365);
 
@@ -467,6 +474,27 @@ class TwitchGiveawayApp {
     requestAnimationFrame(() => {
       try { if (this.wheel && this.wheel.resize) this.wheel.resize(); } catch {}
     });
+  }
+
+  toggleWheelView() {
+    // Switching mid-spin would move the pointer away from the slice the
+    // animation is aiming at, so wait until the wheel has come to rest.
+    if (this.isSpinning) return;
+    this.setWheelViewMode(this.wheelViewMode === 'zoom' ? 'full' : 'zoom');
+  }
+
+  setWheelViewMode(mode, { save = true } = {}) {
+    this.wheelViewMode = mode === 'zoom' ? 'zoom' : 'full';
+    const isZoom = this.wheelViewMode === 'zoom';
+    document.body.classList.toggle('wheel-zoom', isZoom);
+    if (this.elements.wheelViewBtn) {
+      this.elements.wheelViewBtn.title = isZoom ? 'Full wheel view' : 'Section view — fewer, bigger names';
+      this.elements.wheelViewBtn.innerHTML = isZoom ? '<i class="fa-solid fa-circle"></i>' : '<i class="fa-solid fa-circle-half-stroke"></i>';
+    }
+    if (save) this.saveToStorage();
+    if (this.wheel && this.wheel.setViewMode) {
+      try { this.wheel.setViewMode(this.wheelViewMode); } catch {}
+    }
   }
 
   updateConnectionPanelForAuth() {
@@ -1033,6 +1061,22 @@ class TwitchGiveawayApp {
     this.renderWheel();
   }
 
+  // Fills the overlay card: `small` is the caption line (blank to omit), `main`
+  // the big line. Rebuilds only when the shape changes, so the ticking clock
+  // swaps digits instead of tearing down and re-creating the card every second.
+  _setEntryOverlay(overlayEl, small, main) {
+    const shape = (small ? 'k' : '') + (main ? 't' : '');
+    if (overlayEl._overlayShape !== shape) {
+      overlayEl.innerHTML = `<div class="entry-overlay-card">${small ? '<span class="entry-overlay-keyword"></span>' : ''}${main ? '<span class="entry-overlay-time"></span>' : ''}</div>`;
+      overlayEl._overlayShape = shape;
+      overlayEl._smallEl = overlayEl.querySelector('.entry-overlay-keyword');
+      overlayEl._mainEl = overlayEl.querySelector('.entry-overlay-time');
+    }
+    if (overlayEl._smallEl && overlayEl._smallEl.textContent !== small) overlayEl._smallEl.textContent = small;
+    if (overlayEl._mainEl && overlayEl._mainEl.textContent !== main) overlayEl._mainEl.textContent = main;
+    overlayEl.style.display = 'flex';
+  }
+
   updateEntryInfo(forceStop=false) {
     const infoEl = this.elements.entryInfo;
     const overlayEl = this.elements.entryOverlay;
@@ -1044,8 +1088,7 @@ class TwitchGiveawayApp {
       const hasSlicesNow = !!(this.wheel);
       if (overlayEl) {
         if (this.showKeyword && hasSlicesNow && this.keyword) {
-          overlayEl.textContent = this.keyword;
-          overlayEl.style.display = 'flex';
+          this._setEntryOverlay(overlayEl, '', this.keyword);
         } else {
           overlayEl.style.display = 'none';
         }
@@ -1061,12 +1104,7 @@ class TwitchGiveawayApp {
     const hasSlices = !!(this.wheel);
     if (overlayEl) {
       if (remaining > 0 && hasSlices) {
-        if (this.showKeyword && this.keyword) {
-          overlayEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;line-height:1.2"><span style="font-size:0.48em;opacity:0.8;letter-spacing:1px">${this.escapeHtml(this.keyword)}</span><span>${mm}:${ss}</span></div>`;
-        } else {
-          overlayEl.textContent = `${mm}:${ss}`;
-        }
-        overlayEl.style.display = 'flex';
+        this._setEntryOverlay(overlayEl, (this.showKeyword && this.keyword) ? this.keyword : '', `${mm}:${ss}`);
       } else {
         overlayEl.style.display = 'none';
       }
@@ -1350,6 +1388,7 @@ class TwitchGiveawayApp {
     el.appendChild(host);
     this.wheel = new SimpleCanvasWheel(host, {
       items,
+      viewMode: this.wheelViewMode,
       onSpin: () => { this._lastTickStep = null; },
       onCurrentIndexChange: (e) => { if (!this.enableTick) return; if (this._lastTickStep !== e.currentIndex) { this._lastTickStep = e.currentIndex; this._playTick(); } },
       onRest: (e) => {
@@ -1412,6 +1451,7 @@ class TwitchGiveawayApp {
       return;
     }
     this.showToast('Wheel is not ready', 'warn');
+    document.body.classList.remove('is-spinning');
     this.isSpinning = false;
     this.elements.spinBtn.disabled = false;
     this.elements.spinBtn.textContent = 'Spin the Wheel';

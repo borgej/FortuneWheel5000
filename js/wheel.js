@@ -1,11 +1,16 @@
 class SimpleCanvasWheel {
-  constructor(container, { items = [], onSpin, onCurrentIndexChange, onRest } = {}) {
+  constructor(container, { items = [], onSpin, onCurrentIndexChange, onRest, viewMode = 'full' } = {}) {
     this.container = container;
     this.items = items;
     this.onSpin = onSpin;
     this.onCurrentIndexChange = onCurrentIndexChange;
     this.onRest = onRest;
-    this.rotation = 0; // radians; 0 means slice 0 starts at pointer (3 o'clock)
+    // 'full' = whole wheel, pointer at 3 o'clock.
+    // 'zoom' = wheel blown up and pushed off-stage to the right so only the arc
+    //          next to the pointer (now at 9 o'clock) is visible.
+    this.viewMode = viewMode === 'zoom' ? 'zoom' : 'full';
+    this.pointerAngle = this.viewMode === 'zoom' ? Math.PI : 0;
+    this.rotation = this.pointerAngle; // slice 0 starts at the pointer
     this.anim = null;
     this._idleAnim = null;
     this._idleRunning = false;
@@ -24,6 +29,18 @@ class SimpleCanvasWheel {
 
   setItems(items) { this.items = items || []; this.draw(); }
 
+  setViewMode(mode) {
+    const next = mode === 'zoom' ? 'zoom' : 'full';
+    if (next === this.viewMode) return;
+    const prevPointer = this.pointerAngle;
+    this.viewMode = next;
+    this.pointerAngle = next === 'zoom' ? Math.PI : 0;
+    // Move the wheel by the same amount the pointer moved, so whatever slice
+    // was under the pointer stays under it across the switch.
+    this.rotation = this._norm(this.rotation + (this.pointerAngle - prevPointer));
+    this.draw();
+  }
+
   resize() {
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(10, this.container.clientWidth);
@@ -36,23 +53,37 @@ class SimpleCanvasWheel {
 
   get sliceAngle() { return this.items.length > 0 ? (Math.PI * 2) / this.items.length : Math.PI * 2; }
 
+  _norm(a) { const t = Math.PI * 2; return ((a % t) + t) % t; }
+
+  _geometry() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = this.canvas.width / dpr;
+    const h = this.canvas.height / dpr;
+    if (this.viewMode === 'zoom') {
+      // Rim at the pointer on the left, hub at the right edge: the cutout spans
+      // the wheel's whole radius, so labels get the full width to run in.
+      const cx = w * SimpleCanvasWheel.ZOOM_HUB_RATIO;
+      return { w, h, r: cx - w * SimpleCanvasWheel.ZOOM_RIM_RATIO, cx, cy: h / 2 };
+    }
+    return { w, h, r: Math.min(w, h) * 0.48, cx: w / 2, cy: h / 2 };
+  }
+
   currentIndex() {
     if (!this.items.length) return 0;
-    const a = (2*Math.PI - (this.rotation % (2*Math.PI))) % (2*Math.PI);
+    const a = this._norm(this.pointerAngle - this.rotation);
     return Math.floor(a / this.sliceAngle) % this.items.length;
   }
 
   draw() {
-    const { width, height } = this.canvas;
-    const w = width / (window.devicePixelRatio || 1);
-    const h = height / (window.devicePixelRatio || 1);
     const ctx = this.ctx;
+    const { w, h, r, cx, cy } = this._geometry();
     ctx.clearRect(0, 0, w, h);
     if (!this.items.length) return;
-    const cx = w / 2, cy = h / 2;
-    const r = Math.min(w, h) * 0.48;
     const slice = this.sliceAngle;
     const isGreen = document.body.classList.contains('greenscreen');
+    const zoom = this.viewMode === 'zoom';
+    const maxFont = zoom ? 44 : 22;
+    const maxLabelLen = w * (1 - SimpleCanvasWheel.ZOOM_RIM_RATIO) * 0.9;
 
     // -- Rotated section: slices, labels, pins, rim --
     ctx.save();
@@ -63,6 +94,7 @@ class SimpleCanvasWheel {
       const it = this.items[i];
       const start = i * slice;
       const end = start + slice;
+      const midScreen = this._norm(start + slice / 2 + this.rotation);
       const base = it.backgroundColor || '#999';
 
       // Radial gradient fill — bright centre, richer toward rim
@@ -88,9 +120,8 @@ class SimpleCanvasWheel {
       ctx.rotate(mid);
       // Available tangential space at the label radius
       const arcHeight = r * 0.85 * slice;
-      const fontSize = Math.floor(Math.min(22, arcHeight * 0.6, r * 0.08));
+      const fontSize = Math.floor(Math.min(maxFont, arcHeight * 0.6, r * 0.08));
       if (fontSize >= 7) {
-        ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         ctx.font = `bold ${fontSize}px Segoe UI, sans-serif`;
         ctx.fillStyle = it.labelColor || '#111827';
@@ -98,8 +129,18 @@ class SimpleCanvasWheel {
         ctx.shadowBlur = 4;
         const outer = r * 0.94;
         const inner = r * 0.25;
-        const pathLen = outer - inner;
-        ctx.translate(outer, 0);
+        let pathLen = outer - inner;
+        if (zoom) pathLen = Math.min(pathLen, maxLabelLen);
+        // Names on the left half read upside down; in zoom view that is exactly
+        // where the pointer is, so flip them and write outward-in from the rim.
+        if (zoom && Math.cos(midScreen) < 0) {
+          ctx.rotate(Math.PI);
+          ctx.textAlign = 'left';
+          ctx.translate(-outer, 0);
+        } else {
+          ctx.textAlign = 'right';
+          ctx.translate(outer, 0);
+        }
         const text = (it.label || '').toString();
         let clipped = text;
         while (clipped.length > 1 && ctx.measureText(clipped).width > pathLen) {
@@ -153,8 +194,8 @@ class SimpleCanvasWheel {
     const offsetFactor = (options.randomOffsetFactor ?? 0.6);
     const maxOffset = (slice * 0.5) * Math.max(0, Math.min(1, offsetFactor));
     const signedOffset = (rand * 2 - 1) * maxOffset;
-    const desired = (2*Math.PI - (targetIndex + 0.5) * slice - signedOffset) % (2*Math.PI);
-    const startRot = this.rotation % (2*Math.PI);
+    const desired = this._norm(this.pointerAngle - (targetIndex + 0.5) * slice - signedOffset);
+    const startRot = this._norm(this.rotation);
 
     // Kickback: wind back slightly before launching for a snappier feel
     const kickAngle = Math.PI * 0.12;
@@ -196,7 +237,7 @@ class SimpleCanvasWheel {
       if (dt < 1) {
         this.anim = requestAnimationFrame(step);
       } else {
-        this.rotation = this.rotation % (2*Math.PI);
+        this.rotation = this._norm(this.rotation);
         this.draw();
         const ci = this.currentIndex();
         if (typeof this.onRest === 'function') { try { this.onRest({ currentIndex: ci }); } catch {} }
@@ -245,3 +286,10 @@ class SimpleCanvasWheel {
     if (this._idleAnim) { cancelAnimationFrame(this._idleAnim); this._idleAnim = null; }
   }
 }
+
+// Zoom view geometry, as fractions of the stage width: the rim sits at the
+// pointer and the hub at the right edge, so the cutout spans the full radius.
+// ZOOM_RIM_RATIO must stay in sync with the `body.wheel-zoom .wheel-pointer`
+// offset in styles.css.
+SimpleCanvasWheel.ZOOM_RIM_RATIO = 0.10;
+SimpleCanvasWheel.ZOOM_HUB_RATIO = 0.97;

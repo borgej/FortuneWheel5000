@@ -168,6 +168,18 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 }
 .wheel-pointer::before { display: none; }
 .wheel-pointer::after  { display: none; }
+/* Zoom view: wheel is pushed off-stage to the right, so the pointer moves to
+   the left rim and flips to point inward. The 10% must match
+   SimpleCanvasWheel.ZOOM_RIM_RATIO in js/wheel.js. */
+body.wheel-zoom .wheel-pointer {
+  right: auto; left: calc(10% - 44px); width: 44px;
+  background: linear-gradient(270deg, #fef08a 0%, #facc15 45%, #b45309 100%);
+  clip-path: polygon(100% 50%, 0 0, 0 100%);
+}
+body.wheel-zoom .wheel {
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+}
 @keyframes pointerPulse {
   0%, 100% { filter: drop-shadow(0 0 3px #000) drop-shadow(0 0 8px rgba(250,204,21,0.35)); }
   50%       { filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 14px rgba(250,204,21,0.65)); }
@@ -188,17 +200,40 @@ body.is-spinning .wheel-pointer {
 .entry-overlay {
   position: absolute; inset: 0; display: none;
   align-items: center; justify-content: center;
-  pointer-events: none; z-index: 9; font-weight: 900;
-  letter-spacing: 1px; font-size: clamp(28px, 7vw, 56px); color: #fff;
-  -webkit-text-stroke: 2px rgba(0,0,0,0.9);
-  text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000,
-    1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  pointer-events: none; z-index: 9;
 }
+/* A backdrop reads cleanly over any palette — far steadier than outlining the
+   glyphs against whatever slice colours happen to sit underneath. */
+.entry-overlay-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 24px; border-radius: 16px;
+  background: rgba(14, 11, 9, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+.entry-overlay-keyword {
+  font-size: clamp(13px, 1.7vw, 20px); font-weight: 700;
+  letter-spacing: 2px; color: rgba(255, 255, 255, 0.8);
+}
+/* Tabular figures keep the digits from re-flowing every second */
+.entry-overlay-time, #emptyWheelCountdown {
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  letter-spacing: 2px; line-height: 1.05;
+}
+.entry-overlay-time {
+  font-size: clamp(28px, 6vw, 54px); font-weight: 900; color: #fff;
+}
+/* Zoom view puts the hub at the right edge — park the countdown in that
+   label-free wedge instead of on top of the names. */
+body.wheel-zoom .entry-overlay { justify-content: flex-end; padding-right: 3%; }
+body.wheel-zoom .entry-overlay-card { padding: 8px 14px; }
+/* Sized off the stage, not the viewport: the card has to stay inside the
+   narrow label-free wedge around the hub at every wheel size. */
+body.wheel-zoom .entry-overlay-time { font-size: calc(var(--wheel-size) * 0.048); }
+body.wheel-zoom .entry-overlay-keyword { font-size: max(11px, calc(var(--wheel-size) * 0.02)); }
 #emptyWheelCountdown {
-  font-size: 300%;
-  -webkit-text-stroke: 1.5px rgba(0,0,0,0.9);
-  text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000,
-    1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  font-size: 300%; font-weight: 900; color: var(--text);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
 /* Header */
@@ -388,7 +423,8 @@ body.wheel-large .container { grid-template-columns: 340px var(--center-col) 300
   body.wheel-large .container { grid-template-columns: 360px var(--center-col) 320px; width: calc(360px + var(--center-col) + 320px + 32px); }
 }
 
-#wheelSizeBtn { font-size: 18px; padding: 8px 12px; }
+#wheelSizeBtn, #wheelViewBtn { font-size: 18px; padding: 8px 12px; }
+body.is-spinning #wheelViewBtn { pointer-events: none; opacity: 0.45; }
 
 /* Theme toggle button */
 .stream-title-row {
