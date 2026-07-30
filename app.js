@@ -116,6 +116,8 @@ class TwitchGiveawayApp {
       exitGreenScreenBtn: document.getElementById('exitGreenScreenBtn'),
     };
 
+    this.chaos = new ChaosEffects(this);
+
     this.bindEvents();
     this.restoreFromStorage();
     this.setWheelViewMode(this.wheelViewMode, { save: false });
@@ -1123,6 +1125,7 @@ class TwitchGiveawayApp {
       displayName = (tags['display-name'] || tags.username || tags.login || '').toString();
       username = displayName.toLowerCase();
     }
+    if (this.chaos && rawMsg) this.chaos.noteChatMessage(displayName || username, rawMsg);
     if (this.currentWinner && username === this.currentWinner && rawMsg) {
       this.appendWinnerMessage(username, rawMsg);
       if (!this.winnerAcknowledged) {
@@ -1261,6 +1264,8 @@ class TwitchGiveawayApp {
 
   updateCombinedKeyword() { this.keyword = ((this.keywordPrefix || '') + (this.keywordText || '')).trim(); this.saveToStorage(); this.renderWheel(); }
 
+  _applyThemeClass(paletteName) { document.body.classList.toggle('theme-majorpar', paletteName === 'Majorpar v2'); }
+
   render() { this.renderParticipants(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
 
   renderParticipants() {
@@ -1358,7 +1363,8 @@ class TwitchGiveawayApp {
     }
     this.luckyNames = rotated.slice();
 
-    const colors = (WHEEL_PALETTES[this.wheelPaletteIndex] || WHEEL_PALETTES[0]).colors;
+    const palette = WHEEL_PALETTES[this.wheelPaletteIndex] || WHEEL_PALETTES[0];
+    const colors = palette.colors;
     const pickTextColor = (hex) => {
       const h = hex.replace('#','');
       const r = parseInt(h.substring(0,2),16);
@@ -1370,9 +1376,12 @@ class TwitchGiveawayApp {
     const items = rotated.map((name, i) => ({ label: this.participants.get(name)?.displayName || name, backgroundColor: colors[i % colors.length], labelColor: pickTextColor(colors[i % colors.length]) }));
     this.sliceColorMap = new Map(items.map(it => [it.label, it.backgroundColor]));
 
+    this._applyThemeClass(palette.name);
+
     // Fast path: wheel already exists — just update the items in-place
     if (this.wheel) {
       this.wheel.setItems(items);
+      this.wheel.setMetallic(palette.name === 'Majorpar v2');
       this.renderParticipants();
       return;
     }
@@ -1389,8 +1398,9 @@ class TwitchGiveawayApp {
     this.wheel = new SimpleCanvasWheel(host, {
       items,
       viewMode: this.wheelViewMode,
+      metallic: palette.name === 'Majorpar v2',
       onSpin: () => { this._lastTickStep = null; },
-      onCurrentIndexChange: (e) => { if (!this.enableTick) return; if (this._lastTickStep !== e.currentIndex) { this._lastTickStep = e.currentIndex; this._playTick(); } },
+      onCurrentIndexChange: (e) => { if (!this.enableTick) return; if (this._lastTickStep !== e.currentIndex) { this._lastTickStep = e.currentIndex; this.chaos.playTick(); } },
       onRest: (e) => {
         document.body.classList.remove('is-spinning');
         try {
@@ -1402,12 +1412,14 @@ class TwitchGiveawayApp {
             winner = this.luckyNames[safeIdx];
           }
           if (!winner) return;
-          this.showWinner(winner);
-          this.isSpinning = false;
-          this.elements.spinBtn.disabled = false;
-          this.elements.spinBtn.textContent = 'Spin Again';
-          if (this.tempExclusions) this.tempExclusions.clear();
-          this.recordWinner(winner, (this.luckyNames || names));
+          this.chaos.revealWinner(winner, (finalWinner) => {
+            this.showWinner(finalWinner);
+            this.isSpinning = false;
+            this.elements.spinBtn.disabled = false;
+            this.elements.spinBtn.textContent = 'Spin Again';
+            if (this.tempExclusions) this.tempExclusions.clear();
+            this.recordWinner(finalWinner, (this.luckyNames || names));
+          });
         } catch (err) {
           console.warn('Wheel onRest handler error', err);
           this.isSpinning = false;
@@ -1447,7 +1459,10 @@ class TwitchGiveawayApp {
       // Clamp to sensible bounds
       secs = Math.max(0.5, Math.min(60, secs));
       const ms = Math.max(250, Math.floor(secs * 1000));
-      this.wheel.spinToIndex(winnerIndex, ms, 5, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
+      const spinOptions = { ms, revolutions: 5 };
+      this.chaos.runPreSpinSequence(spinOptions, (finalOptions) => {
+        this.wheel.spinToIndex(winnerIndex, finalOptions.ms, finalOptions.revolutions, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
+      });
       return;
     }
     this.showToast('Wheel is not ready', 'warn');
@@ -1497,7 +1512,10 @@ class TwitchGiveawayApp {
     }
     this.elements.winnerModal.style.display = 'flex';
     this.startWinnerTimer();
-    if (this.enableConfetti) this.launchConfetti();
+    if (this.enableConfetti) {
+      if (this.chaos && this.chaos.shouldVaryRain()) this.chaos.launchThemedRain();
+      else this.launchConfetti();
+    }
     this._sendWinnerMessage(winner);
   }
 
@@ -1518,7 +1536,7 @@ class TwitchGiveawayApp {
     grid.innerHTML = '';
     WHEEL_PALETTES.forEach((p, i) => {
       const card = document.createElement('div');
-      card.className = 'palette-card' + (i === this.wheelPaletteIndex ? ' active' : '');
+      card.className = 'palette-card' + (i === this.wheelPaletteIndex ? ' active' : '') + (p.name.startsWith('Majorpar') ? ' palette-card--majorpar' : '');
       const swatches = p.colors.slice(0, 8).map(c => `<span class="palette-swatch" style="background:${c}"></span>`).join('');
       card.innerHTML = `<div class="palette-swatches">${swatches}</div><div class="palette-name">${p.name}</div>`;
       card.addEventListener('click', () => {

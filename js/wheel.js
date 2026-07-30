@@ -1,10 +1,13 @@
 class SimpleCanvasWheel {
-  constructor(container, { items = [], onSpin, onCurrentIndexChange, onRest, viewMode = 'full' } = {}) {
+  constructor(container, { items = [], onSpin, onCurrentIndexChange, onRest, viewMode = 'full', metallic = false } = {}) {
     this.container = container;
     this.items = items;
     this.onSpin = onSpin;
     this.onCurrentIndexChange = onCurrentIndexChange;
     this.onRest = onRest;
+    // Riveted brass/steel rendering used by the Majorpar theme — same geometry,
+    // just heavier gradients and bolt-style trim instead of the flat look.
+    this.metallic = !!metallic;
     // 'full' = whole wheel, pointer at 3 o'clock.
     // 'zoom' = wheel blown up and pushed off-stage to the right so only the arc
     //          next to the pointer (now at 9 o'clock) is visible.
@@ -28,6 +31,13 @@ class SimpleCanvasWheel {
   }
 
   setItems(items) { this.items = items || []; this.draw(); }
+
+  setMetallic(v) {
+    const next = !!v;
+    if (next === this.metallic) return;
+    this.metallic = next;
+    this.draw();
+  }
 
   setViewMode(mode) {
     const next = mode === 'zoom' ? 'zoom' : 'full';
@@ -97,11 +107,20 @@ class SimpleCanvasWheel {
       const midScreen = this._norm(start + slice / 2 + this.rotation);
       const base = it.backgroundColor || '#999';
 
-      // Radial gradient fill — bright centre, richer toward rim
+      // Radial gradient fill — bright centre, richer toward rim. Metallic mode
+      // adds a hot specular band and a darker edge to read as brushed metal.
       const grad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r);
-      grad.addColorStop(0, this._lightenColor(base, 55));
-      grad.addColorStop(0.65, base);
-      grad.addColorStop(1, this._darkenColor(base, 25));
+      if (this.metallic) {
+        grad.addColorStop(0, this._lightenColor(base, 70));
+        grad.addColorStop(0.35, this._lightenColor(base, 25));
+        grad.addColorStop(0.55, base);
+        grad.addColorStop(0.8, this._darkenColor(base, 30));
+        grad.addColorStop(1, this._darkenColor(base, 55));
+      } else {
+        grad.addColorStop(0, this._lightenColor(base, 55));
+        grad.addColorStop(0.65, base);
+        grad.addColorStop(1, this._darkenColor(base, 25));
+      }
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, r, start, end, false);
@@ -109,10 +128,20 @@ class SimpleCanvasWheel {
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Slice border
-      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // Slice border — metallic mode fakes a grooved panel seam (wide dark
+      // groove with a thin bright highlight riding down the middle)
+      if (this.metallic) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,220,150,0.45)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       // Label with soft shadow — font scales with slice arc width
       const mid = start + slice / 2;
@@ -151,37 +180,77 @@ class SimpleCanvasWheel {
       ctx.restore();
     }
 
-    // Rim pins at each slice boundary
+    // Rim pins at each slice boundary — brass rivets in metallic mode
     for (let i = 0; i < this.items.length; i++) {
       const angle = i * slice;
-      const px = Math.cos(angle) * (r - 5);
-      const py = Math.sin(angle) * (r - 5);
+      const pinR = this.metallic ? 6 : 4;
+      const px = Math.cos(angle) * (r - pinR - 1);
+      const py = Math.sin(angle) * (r - pinR - 1);
       ctx.beginPath();
-      ctx.arc(px, py, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.arc(px, py, pinR, 0, Math.PI * 2);
+      if (this.metallic) {
+        const pinGrad = ctx.createRadialGradient(px - pinR * 0.3, py - pinR * 0.3, 0.5, px, py, pinR);
+        pinGrad.addColorStop(0, '#fff3d0');
+        pinGrad.addColorStop(0.4, '#f0b429');
+        pinGrad.addColorStop(1, '#5c3a1e');
+        ctx.fillStyle = pinGrad;
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      }
       ctx.fill();
-      ctx.strokeStyle = 'rgba(80,80,80,0.35)';
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = this.metallic ? 'rgba(20,10,0,0.6)' : 'rgba(80,80,80,0.35)';
+      ctx.lineWidth = this.metallic ? 1.2 : 0.8;
       ctx.stroke();
     }
 
-    // Outer border ring
-    ctx.beginPath();
-    ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = isGreen ? '#9ca3af' : 'rgba(56,189,248,0.6)';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+    // Outer border ring — a layered steel-and-brass bevel in metallic mode
+    if (this.metallic) {
+      ctx.beginPath(); ctx.arc(0, 0, r + 9, 0, Math.PI * 2);
+      ctx.strokeStyle = '#1a1008'; ctx.lineWidth = 8; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,230,180,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = isGreen ? '#9ca3af' : 'rgba(56,189,248,0.6)';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    }
 
     ctx.restore(); // end rotation
 
-    // -- Centre hub: simple semi-transparent circle --
+    // -- Centre hub: plain disc, or a riveted brass plate in metallic mode --
     ctx.save();
     ctx.translate(cx, cy);
     const hubR = Math.max(16, r * 0.088);
     ctx.beginPath();
     ctx.arc(0, 0, hubR, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fill();
+    if (this.metallic) {
+      const hubGrad = ctx.createRadialGradient(-hubR * 0.3, -hubR * 0.3, hubR * 0.1, 0, 0, hubR);
+      hubGrad.addColorStop(0, '#fff3d0');
+      hubGrad.addColorStop(0.45, '#c9a227');
+      hubGrad.addColorStop(1, '#3d2b1f');
+      ctx.fillStyle = hubGrad;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(20,10,0,0.6)';
+      ctx.stroke();
+      const rivetCount = 6;
+      const rivetR = Math.max(1.5, hubR * 0.08);
+      for (let k = 0; k < rivetCount; k++) {
+        const a = (k / rivetCount) * Math.PI * 2;
+        const rx = Math.cos(a) * hubR * 0.72, ry = Math.sin(a) * hubR * 0.72;
+        ctx.beginPath();
+        ctx.arc(rx, ry, rivetR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(20,10,0,0.55)';
+        ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+    }
     ctx.restore();
   }
 

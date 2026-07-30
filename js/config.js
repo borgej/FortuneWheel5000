@@ -3,7 +3,7 @@ const APP_CONFIG = {
   // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
   enableFollowerInfo: true,
   clientId: '__TWITCH_CLIENT_ID__',
-  version: 'v1.6',
+  version: 'v2.0',
   // Explicit redirect URI — must match exactly what is registered in dev.twitch.tv.
   // Set to null to use window.location.origin + pathname automatically (local dev).
   redirectUri: 'https://www.bjsolutions.no/FortuneWheel5000',
@@ -47,6 +47,8 @@ const WHEEL_PALETTES = [
   { name: 'Candlelight',    colors: ['#1a0a00','#3d1c02','#7b3a0a','#b5621e','#d4872c','#f0a830','#f5c050','#fad878'] },
   { name: 'Vintage Sepia',  colors: ['#2c1503','#6b3f0a','#a0522d','#c68642','#d4a574','#e8c99a','#f0dfc0','#f5e6d3'] },
   { name: 'Gold Rush',      colors: ['#7b4400','#a05c00','#c97d00','#e8a400','#f5c400','#ffd700','#ffe766','#fff0a0'] },
+  { name: 'Majorpar v1',    colors: ['#0e141b','#2b2f36','#4a5560','#5c3a1e','#8b5a2b','#a8672f','#c9a227','#f0b429'] },
+  { name: 'Majorpar v2',    colors: ['#0e141b','#2b2f36','#4a5560','#5c3a1e','#8b5a2b','#a8672f','#c9a227','#f0b429'] },
   // Pinks / rose
   { name: 'Rose Gold',      colors: ['#590d22','#a4133c','#ff4d6d','#ff85a1','#ffc8dd','#ff8c00','#e65c00','#ffb347'] },
   { name: 'Bubblegum',      colors: ['#ff6b9d','#ff8fab','#ffb3c1','#ff4d6d','#c9184a','#f72585','#ff85a1','#ffccd5'] },
