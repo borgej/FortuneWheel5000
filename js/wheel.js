@@ -13,7 +13,10 @@ class SimpleCanvasWheel {
     //          next to the pointer (now at 9 o'clock) is visible.
     this.viewMode = viewMode === 'zoom' ? 'zoom' : 'full';
     this.pointerAngle = this.viewMode === 'zoom' ? Math.PI : 0;
-    this.rotation = this.pointerAngle; // slice 0 starts at the pointer
+    // Randomize the starting orientation so the same join order doesn't always
+    // draw the same participant at the pointer — purely cosmetic, computed
+    // once per wheel and never touches which slice index maps to which name.
+    this.rotation = this._norm(this.pointerAngle + Math.random() * Math.PI * 2);
     this.anim = null;
     this._idleAnim = null;
     this._idleRunning = false;

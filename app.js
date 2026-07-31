@@ -45,9 +45,6 @@ class TwitchGiveawayApp {
     this._confirmResolve = null;
     this.giveawaySessionId = null;
     this.currentHistoryIndex = null;
-  // Randomize slice orientation per session
-  this._layoutSessionMarker = null;
-  this.layoutSliceOffset = 0;
   // 'full' = whole wheel, 'zoom' = magnified section with the pointer on the left
   this.wheelViewMode = 'full';
   // Track if history was actually loaded to avoid overwriting with empty on first save
@@ -892,8 +889,6 @@ class TwitchGiveawayApp {
     if (this.entryTimerInterval) clearInterval(this.entryTimerInterval);
     if (this.entryTotalSeconds > 0) { this.entryTimerInterval = setInterval(()=>this.updateEntryInfo(), 1000); }
   this.giveawaySessionId = 'g-' + Date.now();
-  // reset layout offset for new session; will be randomized on first render
-  this._layoutSessionMarker = null; this.layoutSliceOffset = 0;
     this.currentHistoryIndex = null;
     this._setGiveawayButtonState(true);
     this.renderWheel();
@@ -1365,18 +1360,12 @@ class TwitchGiveawayApp {
   }
 
   _renderSpinWheel(names) {
-    // Randomize the base slice orientation once per giveaway session so that
-    // identical participant counts don't always map to the same absolute angles.
-    if (this.giveawaySessionId && this._layoutSessionMarker !== this.giveawaySessionId) {
-      this._layoutSessionMarker = this.giveawaySessionId;
-      const n = Math.max(1, names.length);
-      this.layoutSliceOffset = Math.floor(Math.random() * n);
-    }
-    let rotated = names.slice();
-    if (this.layoutSliceOffset && rotated.length > 1) {
-      const o = ((this.layoutSliceOffset % rotated.length) + rotated.length) % rotated.length;
-      rotated = rotated.slice(o).concat(rotated.slice(0, o));
-    }
+    // Keep join order stable — each participant keeps their slice position as
+    // more people join. (Visual starting orientation is randomized once per
+    // wheel via SimpleCanvasWheel's own initial rotation, not by reordering
+    // this list — reordering here used to bump existing participants to a
+    // different slice every time someone new joined.)
+    const rotated = names.slice();
     this.luckyNames = rotated.slice();
 
     const palette = WHEEL_PALETTES[this.wheelPaletteIndex] || WHEEL_PALETTES[0];
@@ -1487,7 +1476,7 @@ class TwitchGiveawayApp {
       const ms = Math.max(250, Math.floor(secs * 1000));
       const spinOptions = { ms, revolutions: 5 };
       this.chaos.runPreSpinSequence(spinOptions, (finalOptions) => {
-        this.wheel.spinToIndex(winnerIndex, finalOptions.ms, finalOptions.revolutions, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.6 });
+        this.wheel.spinToIndex(winnerIndex, finalOptions.ms, finalOptions.revolutions, { smooth: !!this.spinSmoothEasing, randomOffsetFactor: 0.9 });
       });
       return;
     }

@@ -3,7 +3,7 @@ const APP_CONFIG = {
   // Requires Twitch Client ID + OAuth (moderator:read:followers scope)
   enableFollowerInfo: true,
   clientId: '__TWITCH_CLIENT_ID__',
-  version: 'v2.9',
+  version: 'v3.1',
   // Explicit redirect URI — must match exactly what is registered in dev.twitch.tv.
   // Set to null to use window.location.origin + pathname automatically (local dev).
   redirectUri: 'https://www.bjsolutions.no/FortuneWheel5000',
