@@ -26,7 +26,7 @@
     gtag('js', new Date());
     gtag('config', '__GA_MEASUREMENT_ID__');
   </script>
-  <link rel="stylesheet" href="./styles.css?v=2.7" />
+  <link rel="stylesheet" href="./styles.css?v=2.9" />
   <script>(function(){var t=localStorage.getItem('mw.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})()</script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
@@ -209,7 +209,7 @@
         <button id="gsClearBtn" class="btn-danger" title="Clear all participants and reset the wheel">Clear</button>
         <button id="wheelSizeBtn" class="btn-secondary" title="Toggle wheel size"><i class="fa-solid fa-expand"></i></button>
         <button id="wheelViewBtn" class="btn-secondary" title="Section view — fewer, bigger names"><i class="fa-solid fa-circle-half-stroke"></i></button>
-        <button id="gsThemeBtn" class="btn-secondary" title="Switch to light mode"><i class="fa-solid fa-sun"></i></button>
+        <button id="gsPaletteBtn" class="btn-secondary" title="Change the wheel colour palette"><i class="fa-solid fa-palette"></i></button>
         <button id="exitGreenScreenBtn" class="btn-secondary" title="Toggle green screen mode"><i class="fa-solid fa-display"></i></button>
       </div>
     </div>
@@ -316,34 +316,30 @@
     </div>
   </div>
 
-  <script src="./js/tmi-loader.js?v=2.7"></script>
-  <script src="./js/cookies.js?v=2.7"></script>
+  <script src="./js/tmi-loader.js?v=2.9"></script>
+  <script src="./js/cookies.js?v=2.9"></script>
   <script>
     (function() {
-      var btns = [document.getElementById('themeSwitchBtn'), document.getElementById('gsThemeBtn')].filter(Boolean);
+      var btn = document.getElementById('themeSwitchBtn');
       var light = localStorage.getItem('mw.theme') === 'light';
       function apply(isLight) {
         document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
-        btns.forEach(function(btn) {
-          btn.innerHTML = isLight ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
-          btn.title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
-        });
+        btn.innerHTML = isLight ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+        btn.title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
       }
       apply(light);
-      btns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          light = !light;
-          localStorage.setItem('mw.theme', light ? 'light' : 'dark');
-          apply(light);
-        });
+      btn.addEventListener('click', function() {
+        light = !light;
+        localStorage.setItem('mw.theme', light ? 'light' : 'dark');
+        apply(light);
       });
     })();
   </script>
-  <script src="./js/config.js?v=2.7"></script>
-  <script src="./js/wheel.js?v=2.7"></script>
-  <script src="./js/chaos.js?v=2.7"></script>
-  <script src="./js/twitch-chat.js?v=2.7"></script>
-  <script src="./app.js?v=2.7"></script>
-  <script src="./js/consent.js?v=2.7"></script>
+  <script src="./js/config.js?v=2.9"></script>
+  <script src="./js/wheel.js?v=2.9"></script>
+  <script src="./js/chaos.js?v=2.9"></script>
+  <script src="./js/twitch-chat.js?v=2.9"></script>
+  <script src="./app.js?v=2.9"></script>
+  <script src="./js/consent.js?v=2.9"></script>
 </body>
 </html>

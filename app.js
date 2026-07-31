@@ -116,6 +116,7 @@ class TwitchGiveawayApp {
       exitGreenScreenBtn: document.getElementById('exitGreenScreenBtn'),
       gsGiveawayBtn: document.getElementById('gsGiveawayBtn'),
       gsClearBtn: document.getElementById('gsClearBtn'),
+      gsPaletteBtn: document.getElementById('gsPaletteBtn'),
     };
 
     this.chaos = new ChaosEffects(this);
@@ -191,6 +192,7 @@ class TwitchGiveawayApp {
   if (this.elements.clearGiveawayBtn) this.elements.clearGiveawayBtn.addEventListener('click', () => this.clearParticipants());
   if (this.elements.gsGiveawayBtn) this.elements.gsGiveawayBtn.addEventListener('click', () => this.toggleGiveaway());
   if (this.elements.gsClearBtn) this.elements.gsClearBtn.addEventListener('click', () => this.clearParticipants());
+  if (this.elements.gsPaletteBtn) this.elements.gsPaletteBtn.addEventListener('click', () => this.openPaletteModal());
   if (this.elements.paletteBtn) this.elements.paletteBtn.addEventListener('click', () => this.openPaletteModal());
   if (this.elements.paletteModal) this.elements.paletteModal.addEventListener('click', (e) => { if (e.target === this.elements.paletteModal) this.closePaletteModal(); });
   const closePaletteBtn = document.getElementById('closePaletteBtn');
@@ -1568,6 +1570,7 @@ class TwitchGiveawayApp {
       });
       grid.appendChild(card);
     });
+    this._positionModalForGreenScreen(this.elements.paletteModal);
     if (this.elements.paletteModal) this.elements.paletteModal.style.display = 'flex';
   }
 
@@ -1711,18 +1714,20 @@ class TwitchGiveawayApp {
     setTimeout(()=>{ wrap.style.transform='translateY(10px)'; wrap.style.opacity='0'; setTimeout(()=>{ wrap.remove(); }, 200); }, 3000);
   }
 
-  showConfirm(message, title='Please confirm') { return new Promise((resolve)=>{ this._confirmResolve = resolve; this.elements.confirmTitle.textContent = title; this.elements.confirmMessage.textContent = message; this._positionConfirmForGreenScreen(); this.elements.confirmModal.style.display = 'flex'; }); }
+  showConfirm(message, title='Please confirm') { return new Promise((resolve)=>{ this._confirmResolve = resolve; this.elements.confirmTitle.textContent = title; this.elements.confirmMessage.textContent = message; this._positionModalForGreenScreen(this.elements.confirmModal); this.elements.confirmModal.style.display = 'flex'; }); }
 
   // In green screen mode streamers crop their capture to just the wheel, so
-  // the confirm dialog must land wherever there's the most clear space around
-  // the wheel's actual rendered position — not a fixed corner that might not
-  // exist at their wheel size / viewport.
-  _positionConfirmForGreenScreen() {
-    const modal = this.elements.confirmModal;
+  // popups like the confirm dialog or the palette picker must land wherever
+  // there's the most clear space around the wheel's actual rendered position
+  // — not a fixed corner that might not exist at their wheel size / viewport.
+  _positionModalForGreenScreen(modal) {
+    if (!modal) return;
+    const card = modal.querySelector('.winner-card, .palette-modal-card');
     const stage = document.querySelector('.wheel-stage');
     if (!document.body.classList.contains('greenscreen') || !stage) {
       modal.style.justifyContent = '';
       modal.style.alignItems = '';
+      if (card) { card.style.maxWidth = ''; card.style.maxHeight = ''; }
       return;
     }
     const r = stage.getBoundingClientRect();
@@ -1730,8 +1735,20 @@ class TwitchGiveawayApp {
     const spaceRight = window.innerWidth - r.right;
     const spaceTop = r.top;
     const spaceBottom = window.innerHeight - r.bottom;
-    modal.style.justifyContent = spaceLeft >= spaceRight ? 'flex-start' : 'flex-end';
-    modal.style.alignItems = spaceTop >= spaceBottom ? 'flex-start' : 'flex-end';
+    const horizontal = spaceLeft >= spaceRight ? 'flex-start' : 'flex-end';
+    const vertical = spaceTop >= spaceBottom ? 'flex-start' : 'flex-end';
+    modal.style.justifyContent = horizontal;
+    modal.style.alignItems = vertical;
+    // Constrain the card to exactly the space available in that corner —
+    // whatever doesn't fit scrolls, instead of the card just growing over
+    // the wheel with a tall palette list or a long confirm message.
+    if (card) {
+      const chosenSpaceH = horizontal === 'flex-start' ? spaceLeft : spaceRight;
+      const chosenSpaceV = vertical === 'flex-start' ? spaceTop : spaceBottom;
+      card.style.maxWidth = Math.max(160, chosenSpaceH - 24) + 'px';
+      card.style.maxHeight = Math.max(160, chosenSpaceV - 24) + 'px';
+      card.style.overflowY = 'auto';
+    }
   }
   _resolveConfirm(val){ if (this._confirmResolve) this._confirmResolve(!!val); this._confirmResolve = null; this.elements.confirmModal.style.display = 'none'; }
 

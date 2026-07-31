@@ -489,6 +489,11 @@ body.greenscreen .giveaway-controls button.btn-secondary {
    streamers crop their capture to just the wheel, so park the dialog where the
    left menu normally lives instead of dead-centre. */
 body.greenscreen #confirmModal .winner-card { margin: 24px; min-width: 0 !important; max-width: 260px !important; }
+/* Same deal for the wheel palette picker — keep chroma green pure and keep
+   the card compact enough to actually fit in whichever corner has room. */
+body.greenscreen .palette-modal { background: transparent !important; backdrop-filter: none !important; }
+body.greenscreen .palette-modal-card { margin: 24px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
+body.greenscreen .palette-grid { grid-template-columns: repeat(2, 1fr); }
 
 /* ============================= Chaos Mode ============================= */
 .chaos-details { margin-top: 8px; }
