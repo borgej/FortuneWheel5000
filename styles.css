@@ -184,8 +184,10 @@ body.wheel-zoom.wheel-empty .wheel-pointer {
   background: linear-gradient(90deg, #fef08a 0%, #facc15 45%, #b45309 100%);
   clip-path: polygon(0 50%, 100% 0, 100% 100%);
 }
+/* Square corners: rounded ones are visible as cut-off edges once the wheel is
+   composited into a stream scene. */
 body.wheel-zoom .wheel {
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 10px 40px rgba(0,0,0,0.45);
 }
 @keyframes pointerPulse {
@@ -231,6 +233,45 @@ body.is-spinning .wheel-pointer {
 .entry-overlay-time {
   font-size: clamp(28px, 6vw, 54px); font-weight: 900; color: #fff;
 }
+/* Shown while follower/subscriber status is refreshed just before a spin.
+   Only appears if the refresh actually takes a moment. */
+.spin-prep-overlay {
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  pointer-events: none; z-index: 11;
+}
+.spin-prep-overlay.visible { display: flex; }
+.spin-prep-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 22px; border-radius: 16px;
+  background: rgba(14, 11, 9, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  animation: spinPrepIn 220ms ease-out both;
+}
+.spin-prep-text {
+  font-size: clamp(13px, 1.6vw, 19px); font-weight: 800;
+  letter-spacing: 1px; color: rgba(255, 255, 255, 0.92);
+}
+.spin-prep-dots { display: inline-flex; gap: 5px; }
+.spin-prep-dots i {
+  width: 6px; height: 6px; border-radius: 50%; background: #facc15;
+  animation: spinPrepBlink 1s ease-in-out infinite;
+}
+.spin-prep-dots i:nth-child(2) { animation-delay: 0.15s; }
+.spin-prep-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes spinPrepBlink {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40%           { opacity: 1;    transform: translateY(-3px); }
+}
+@keyframes spinPrepIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+body.wheel-zoom .spin-prep-overlay { justify-content: flex-end; padding-right: 3%; }
+body.wheel-zoom .spin-prep-card { padding: 8px 14px; }
+body.wheel-zoom .spin-prep-text { font-size: max(11px, calc(var(--wheel-size) * 0.022)); }
+
 /* Zoom view puts the hub at the right edge — park the countdown in that
    label-free wedge instead of on top of the names. */
 body.wheel-zoom .entry-overlay { justify-content: flex-end; padding-right: 3%; }
@@ -351,6 +392,23 @@ details.options-details[open] .options-summary::after { transform: rotate(-180de
 .options-summary:hover { background: var(--options-summary-hover-bg); color: #c0b0a0; }
 .options-details .toggle-group { padding: 8px 10px 10px; }
 .options-details .input-group { padding: 0 10px 12px; }
+
+/* Blacklist — lives in the left column only, never over the wheel */
+.blacklist-body { padding: 4px 10px 10px; }
+.blacklist-hint { margin: 0 0 8px; font-size: 11px; line-height: 1.45; color: var(--text-muted); }
+.blacklist-add-row { display: flex; gap: 6px; align-items: stretch; margin-bottom: 10px; }
+.blacklist-add-row input { flex: 1; min-width: 0; }
+.blacklist-add-row button { flex-shrink: 0; padding: 8px 14px; font-size: 13px; }
+.blacklist-list { max-height: 220px; overflow-y: auto; overflow-x: hidden; }
+.blacklist-empty { font-size: 11px; color: var(--text-muted); opacity: 0.8; padding: 2px 0; }
+.blacklist-item {
+  background: var(--participant-item-bg); border-left: 3px solid rgba(200,60,60,0.6);
+  border-radius: 8px; padding: 6px 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; gap: 8px;
+}
+.blacklist-name { font-weight: 700; color: var(--text); font-size: clamp(11px, 2.2vw, 13px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .btn-debug-toggle { background: none; border: 1px dashed rgba(140,100,60,0.3); color: var(--text-muted); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-top: 4px; }
 .btn-debug-toggle:hover { border-color: rgba(180,120,70,0.5); color: #b0a090; }
 .btn-palette-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 2px; }

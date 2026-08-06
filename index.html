@@ -26,7 +26,7 @@
     gtag('js', new Date());
     gtag('config', '__GA_MEASUREMENT_ID__');
   </script>
-  <link rel="stylesheet" href="./styles.css?v=3.1" />
+  <link rel="stylesheet" href="./styles.css?v=3.2" />
   <script>(function(){var t=localStorage.getItem('mw.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})()</script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
@@ -97,10 +97,10 @@
               <label class="toggle" title="Show the giveaway keyword in the centre of the wheel while entries are open">
                 <input id="showKeywordToggle" type="checkbox" checked /> <span class="toggle-icon"><i class="fa-solid fa-key"></i></span> Show keyword
               </label>
-              <label class="toggle" title="Only let followers join — requires Twitch authorization">
+              <label class="toggle" title="Non-followers still join and appear on the wheel, but only followers can be picked as the winner — requires Twitch authorization">
                 <input id="followersOnlyToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-users"></i></span> Followers only
               </label>
-              <label class="toggle" title="Only let subscribers join — requires Twitch authorization">
+              <label class="toggle" title="Non-subscribers still join and appear on the wheel, but only subscribers can be picked as the winner — requires Twitch authorization">
                 <input id="subscribersOnlyToggle" type="checkbox" /> <span class="toggle-icon"><i class="fa-solid fa-star"></i></span> Subscribers only
               </label>
               <label class="toggle" title="Post a message in chat when the giveaway starts — requires Twitch authorization">
@@ -187,6 +187,19 @@
       </div> <!-- /#giveawayOptions -->
       </div> <!-- /#giveawayPanel -->
 
+      <div class="card" id="blacklistCard">
+        <details class="options-details" id="blacklistDetails">
+          <summary class="options-summary"><i class="fa-solid fa-user-slash"></i> Blacklist (<span id="blacklistCount">0</span>)</summary>
+          <div class="blacklist-body">
+            <p class="blacklist-hint">Blacklisted usernames still join and appear on the wheel as normal &mdash; they are simply never picked as the winner. Nothing on screen or in chat reveals who is on this list. Everything else stays completely random.</p>
+            <div class="blacklist-add-row">
+              <input id="blacklistInput" type="text" placeholder="username, another_user" autocomplete="off" spellcheck="false" />
+              <button id="blacklistAddBtn" class="btn-secondary" title="Add to blacklist">Add</button>
+            </div>
+            <div id="blacklistList" class="blacklist-list"></div>
+          </div>
+        </details>
+      </div>
 
     </div>
 
@@ -197,6 +210,12 @@
           <div>Connect and set a keyword to start collecting participants.</div>
         </div>
         <div id="entryOverlay" class="entry-overlay" aria-live="polite"></div>
+        <div id="spinPrepOverlay" class="spin-prep-overlay" aria-live="polite">
+          <div class="spin-prep-card">
+            <span class="spin-prep-text">Loading rigging algorithm</span>
+            <span class="spin-prep-dots"><i></i><i></i><i></i></span>
+          </div>
+        </div>
         <div id="chaosChatLayer" class="chaos-chat-layer"></div>
         <div id="chaosIndicator" class="chaos-indicator"></div>
         <div id="chaosSpotlightTag" class="chaos-spotlight-tag"></div>
@@ -316,8 +335,8 @@
     </div>
   </div>
 
-  <script src="./js/tmi-loader.js?v=3.1"></script>
-  <script src="./js/cookies.js?v=3.1"></script>
+  <script src="./js/tmi-loader.js?v=3.2"></script>
+  <script src="./js/cookies.js?v=3.2"></script>
   <script>
     (function() {
       var btn = document.getElementById('themeSwitchBtn');
@@ -335,11 +354,11 @@
       });
     })();
   </script>
-  <script src="./js/config.js?v=3.1"></script>
-  <script src="./js/wheel.js?v=3.1"></script>
-  <script src="./js/chaos.js?v=3.1"></script>
-  <script src="./js/twitch-chat.js?v=3.1"></script>
-  <script src="./app.js?v=3.1"></script>
-  <script src="./js/consent.js?v=3.1"></script>
+  <script src="./js/config.js?v=3.2"></script>
+  <script src="./js/wheel.js?v=3.2"></script>
+  <script src="./js/chaos.js?v=3.2"></script>
+  <script src="./js/twitch-chat.js?v=3.2"></script>
+  <script src="./app.js?v=3.2"></script>
+  <script src="./js/consent.js?v=3.2"></script>
 </body>
 </html>

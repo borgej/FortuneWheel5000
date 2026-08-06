@@ -28,6 +28,9 @@ class TwitchGiveawayApp {
     this.entryStartTime = 0;
     this.entryTotalSeconds = 0;
     this.excludedWinners = new Set();
+    // Usernames (lowercase) that can never enter the wheel or win. This is the
+    // only place winner selection is influenced — everything else is random.
+    this.blacklist = new Set();
     this.followersOnly = false;
     this.subscribersOnly = false;
     this.showKeyword = true;
@@ -114,6 +117,10 @@ class TwitchGiveawayApp {
       gsGiveawayBtn: document.getElementById('gsGiveawayBtn'),
       gsClearBtn: document.getElementById('gsClearBtn'),
       gsPaletteBtn: document.getElementById('gsPaletteBtn'),
+      blacklistInput: document.getElementById('blacklistInput'),
+      blacklistAddBtn: document.getElementById('blacklistAddBtn'),
+      blacklistList: document.getElementById('blacklistList'),
+      blacklistCount: document.getElementById('blacklistCount'),
     };
 
     this.chaos = new ChaosEffects(this);
@@ -222,7 +229,7 @@ class TwitchGiveawayApp {
       this.elements.followersOnlyToggle.addEventListener('change', () => {
         this.followersOnly = !!this.elements.followersOnlyToggle.checked;
         if (this.followersOnly && !this.accessToken) {
-          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a follower and entries will be blocked.', 'warn');
+          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a follower, so nobody will be able to win.', 'warn');
         }
         this.saveToStorage();
       });
@@ -231,7 +238,7 @@ class TwitchGiveawayApp {
       this.elements.subscribersOnlyToggle.addEventListener('change', () => {
         this.subscribersOnly = !!this.elements.subscribersOnlyToggle.checked;
         if (this.subscribersOnly && !this.accessToken) {
-          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a subscriber and entries will be blocked.', 'warn');
+          this.showToast('Authorize with Twitch first — without authorization nobody can be verified as a subscriber, so nobody will be able to win.', 'warn');
         }
         this.saveToStorage();
       });
@@ -287,6 +294,14 @@ class TwitchGiveawayApp {
         this.saveToStorage();
       }
     });
+    if (this.elements.blacklistAddBtn) {
+      this.elements.blacklistAddBtn.addEventListener('click', () => this.addToBlacklistFromInput());
+    }
+    if (this.elements.blacklistInput) {
+      this.elements.blacklistInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); this.addToBlacklistFromInput(); }
+      });
+    }
     this.elements.entryTimerMinutesInput.addEventListener('input', (e) => {
       const v = parseInt(e.target.value, 10);
       if (!isNaN(v) && v >= 0) {
@@ -398,6 +413,13 @@ class TwitchGiveawayApp {
         }
       }
 
+      // Blacklist
+      const blRaw = localStorage.getItem('mw.blacklist');
+      if (blRaw) {
+        const arr = JSON.parse(blRaw);
+        if (Array.isArray(arr)) this.blacklist = new Set(arr.map(n => String(n).toLowerCase()));
+      }
+
       // Excluded winners
       const ewRaw = localStorage.getItem('mw.excluded');
       if (ewRaw) {
@@ -449,6 +471,8 @@ class TwitchGiveawayApp {
       try { localStorage.setItem('mw.participants', JSON.stringify(Array.from(this.participants.entries()))); } catch {}
       // Excluded winners set
       try { localStorage.setItem('mw.excluded', JSON.stringify(Array.from(this.excludedWinners || []))); } catch {}
+      // Blacklisted usernames — persists across giveaways and Clear
+      try { localStorage.setItem('mw.blacklist', JSON.stringify(Array.from(this.blacklist || []))); } catch {}
       // History: only write if we loaded it successfully or we have non-empty in-memory history
       try {
         if (this._historyLoaded || (Array.isArray(this.history) && this.history.length > 0)) {
@@ -1156,10 +1180,10 @@ class TwitchGiveawayApp {
     if (!wantsJoin && !containsKeyword) return;
     if (!username || this.participants.has(username)) return;
 
+    // Followers-only and subscribers-only no longer block entry: everyone joins
+    // and appears on the wheel, they are just never picked as the winner.
     const followData = await this.getFollowerInfo(username);
-    if (this.followersOnly && !followData.isFollower) return;
     const isSubscriber = await this.getSubscriberInfo(username);
-    if (this.subscribersOnly && !isSubscriber) return;
     this.participants.set(username, { displayName: displayName || username, followData, isSubscriber, ts: Date.now() });
     if (!this._newlyAdded) this._newlyAdded = new Set();
     this._newlyAdded.add(username);
@@ -1204,12 +1228,19 @@ class TwitchGiveawayApp {
 
   async resolveUserId(username) {
     if (!APP_CONFIG.enableFollowerInfo) return { id: '', profileImageUrl: '' };
+    // A login never maps to a different id, so cache it — the pre-spin refresh
+    // would otherwise re-look-up the same people on every spin.
+    if (!this._userIdCache) this._userIdCache = new Map();
+    const key = this._normalizeUsername(username);
+    if (this._userIdCache.has(key)) return this._userIdCache.get(key);
     const resp = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
       headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId }
     });
     const data = await resp.json();
     const user = data?.data?.[0];
-    return { id: user?.id || '', profileImageUrl: user?.profile_image_url || '' };
+    const result = { id: user?.id || '', profileImageUrl: user?.profile_image_url || '' };
+    if (result.id) this._userIdCache.set(key, result);
+    return result;
   }
 
   daysSince(date) { return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000*60*60*24))); }
@@ -1221,6 +1252,144 @@ class TwitchGiveawayApp {
     this.saveToStorage();
     this.renderParticipants();
     this.renderWheel();
+  }
+
+  _normalizeUsername(name) {
+    return String(name || '').trim().replace(/^@+/, '').toLowerCase();
+  }
+
+  isBlacklisted(username) {
+    if (!this.blacklist || this.blacklist.size === 0) return false;
+    return this.blacklist.has(this._normalizeUsername(username));
+  }
+
+  // Everyone joins and stays on the wheel; these are the only rules that stop a
+  // slice from being landed on. Both are silent — nothing on screen or in chat
+  // tells the participant they cannot win.
+  isWinnable(username) {
+    if (this.isBlacklisted(username)) return false;
+    const data = this.participants.get(username);
+    if (this.followersOnly && !data?.followData?.isFollower) return false;
+    if (this.subscribersOnly && !data?.isSubscriber) return false;
+    return true;
+  }
+
+  // Follower/subscriber status is captured once, when someone joins. Somebody
+  // who follows or subscribes *after* joining would stay frozen as ineligible
+  // and could never win, so re-check them right before the draw. Only the
+  // currently-ineligible are re-checked — that is the only direction that can
+  // change who may win, and it keeps the call count down.
+  async refreshEligibility(names) {
+    if (!this.accessToken || !this.clientId || !this.channelId) return;
+    if (!this.followersOnly && !this.subscribersOnly) return;
+    const stale = names.filter(n => {
+      if (this.isBlacklisted(n)) return false;
+      const d = this.participants.get(n);
+      if (!d) return false;
+      const needsFollow = this.followersOnly && !d.followData?.isFollower;
+      const needsSub = this.subscribersOnly && !d.isSubscriber;
+      return needsFollow || needsSub;
+    });
+    if (stale.length === 0) return;
+
+    let changed = false;
+    const recheck = async (name) => {
+      const d = this.participants.get(name);
+      if (!d) return;
+      try {
+        if (this.followersOnly && !d.followData?.isFollower) {
+          const fd = await this.getFollowerInfo(name);
+          if (fd?.isFollower) { d.followData = fd; changed = true; }
+        }
+        if (this.subscribersOnly && !d.isSubscriber) {
+          const sub = await this.getSubscriberInfo(name);
+          if (sub) { d.isSubscriber = true; changed = true; }
+        }
+      } catch (e) { console.warn('Eligibility refresh failed for', name, e); }
+    };
+
+    // Small batches keep us well clear of Twitch's rate limit without making
+    // the streamer wait on a long serial queue.
+    const BATCH = 5;
+    for (let i = 0; i < stale.length; i += BATCH) {
+      await Promise.all(stale.slice(i, i + BATCH).map(recheck));
+    }
+    if (changed) {
+      this.saveToStorage();
+      this.renderParticipants();
+    }
+  }
+
+  _showSpinPrep() {
+    const el = document.getElementById('spinPrepOverlay');
+    if (el) el.classList.add('visible');
+  }
+
+  _hideSpinPrep() {
+    if (this._spinPrepTimer) { clearTimeout(this._spinPrepTimer); this._spinPrepTimer = null; }
+    const el = document.getElementById('spinPrepOverlay');
+    if (el) el.classList.remove('visible');
+  }
+
+  addToBlacklistFromInput() {
+    const input = this.elements.blacklistInput;
+    if (!input) return;
+    // Accept several names at once, separated by comma, space or newline
+    const names = String(input.value || '').split(/[\s,;]+/).map(n => this._normalizeUsername(n)).filter(Boolean);
+    if (names.length === 0) return;
+    let added = 0;
+    for (const name of names) {
+      if (this.blacklist.has(name)) continue;
+      this.blacklist.add(name);
+      added++;
+    }
+    input.value = '';
+    if (added === 0) {
+      this.showToast('Already blacklisted.', 'info');
+      return;
+    }
+    // Anyone already on the wheel stays there — they simply stop being winnable
+    this.saveToStorage();
+    this.renderBlacklist();
+    this.showToast(`Blacklisted ${added} username${added === 1 ? '' : 's'}.`, 'info');
+  }
+
+  removeFromBlacklist(username) {
+    const name = this._normalizeUsername(username);
+    if (!this.blacklist.delete(name)) return;
+    this.saveToStorage();
+    this.renderBlacklist();
+  }
+
+  renderBlacklist() {
+    const list = this.elements.blacklistList;
+    const count = this.elements.blacklistCount;
+    const names = Array.from(this.blacklist || []).sort((a, b) => a.localeCompare(b));
+    if (count) count.textContent = names.length.toString();
+    if (!list) return;
+    list.innerHTML = '';
+    if (names.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'blacklist-empty';
+      empty.textContent = 'Nobody is blacklisted.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const name of names) {
+      const item = document.createElement('div');
+      item.className = 'blacklist-item';
+      const label = document.createElement('span');
+      label.className = 'blacklist-name';
+      label.textContent = name;
+      item.appendChild(label);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'participant-remove';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Remove from blacklist';
+      removeBtn.addEventListener('click', () => this.removeFromBlacklist(name));
+      item.appendChild(removeBtn);
+      list.appendChild(item);
+    }
   }
 
   removeNonSubscribers() {
@@ -1273,7 +1442,7 @@ class TwitchGiveawayApp {
 
   _applyThemeClass(paletteName) { document.body.classList.toggle('theme-majorpar', paletteName === 'Majorpar v2'); }
 
-  render() { this.renderParticipants(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
+  render() { this.renderParticipants(); this.renderBlacklist(); this.renderWheel(); this.renderHistory(); this.updateEntryInfo(); }
 
   renderParticipants() {
     this.elements.participantCount.textContent = this.participants.size.toString();
@@ -1314,6 +1483,8 @@ class TwitchGiveawayApp {
     const el = this.elements.wheelElement;
     const info = document.getElementById('wheelInfo');
     const allNames = Array.from(this.participants.keys());
+    // Blacklisted names deliberately stay on the wheel — they are only skipped
+    // when the winner is picked, so nothing on screen reveals the blacklist.
     let names = allNames;
     if (this.tempExclusions && this.tempExclusions.size) names = names.filter(n => !this.tempExclusions.has(n));
     if (this.excludedWinners && this.excludedWinners.size) names = names.filter(n => !this.excludedWinners.has(n));
@@ -1446,7 +1617,7 @@ class TwitchGiveawayApp {
     this.renderParticipants();
   }
 
-  spinWheel() {
+  async spinWheel() {
     if (this.isSpinning || this.participants.size === 0) return;
     this.isSpinning = true;
     if (!this.giveawaySessionId) {
@@ -1456,17 +1627,46 @@ class TwitchGiveawayApp {
     this.keywordActive = false;
     this.elements.spinBtn.disabled = true;
     this.elements.spinBtn.textContent = 'Spinning...';
+    const abort = () => {
+      this._hideSpinPrep();
+      this.isSpinning = false;
+      this.elements.spinBtn.disabled = false;
+      this.elements.spinBtn.textContent = 'Spin the Wheel';
+    };
     const allNames = Array.from(this.participants.keys());
     let names = this.luckyNames && Array.isArray(this.luckyNames) && this.luckyNames.length ? this.luckyNames.slice() : allNames;
     if (this.tempExclusions && this.tempExclusions.size) names = names.filter(n => !this.tempExclusions.has(n));
     if (this.excludedWinners && this.excludedWinners.size) names = names.filter(n => !this.excludedWinners.has(n));
-    if (names.length === 0) { this.isSpinning = false; this.elements.spinBtn.disabled = false; this.elements.spinBtn.textContent = 'Spin the Wheel'; return; }
+    if (names.length === 0) { abort(); return; }
+
+    // Anyone who followed or subscribed after joining is still frozen as
+    // ineligible — bring them up to date before deciding who can win. The
+    // overlay only appears if this actually takes a noticeable moment.
+    this._spinPrepTimer = setTimeout(() => this._showSpinPrep(), 350);
+    try {
+      await this.refreshEligibility(names);
+    } finally {
+      this._hideSpinPrep();
+    }
+    // Blacklisted names, and non-followers/non-subscribers when those toggles
+    // are on, keep their slice on the wheel but are never landed on. Wording
+    // stays neutral so nothing on stream gives away why someone cannot win.
+    // Never re-order or shrink `names` here — its indexes address the wheel's
+    // slices, so anyone removed while we awaited is dropped by index instead.
+    const winnableIndexes = names
+      .map((n, i) => i)
+      .filter(i => this.participants.has(names[i]) && this.isWinnable(names[i]));
+    if (winnableIndexes.length === 0) {
+      this.showToast('No eligible participants to draw from.', 'warn');
+      abort();
+      return;
+    }
     if (this.elements.entryOverlay) this.elements.entryOverlay.style.display = 'none';
     document.body.classList.add('is-spinning');
     // GA: track spin
     try { if (typeof gtag === 'function') gtag('event', 'wheel_spin', { participant_count: names.length, channel: this.channelName || '' }); } catch {}
-    // Winner index is random each spin; no bias
-    const winnerIndex = Math.floor(Math.random() * names.length);
+    // Winner index is random each spin; no bias beyond the blacklist
+    const winnerIndex = winnableIndexes[Math.floor(Math.random() * winnableIndexes.length)];
     if (this.wheel && this.wheel.spinToIndex) {
       this._pendingWinnerIndex = winnerIndex;
   // Use configured duration; no UI control
@@ -1482,9 +1682,7 @@ class TwitchGiveawayApp {
     }
     this.showToast('Wheel is not ready', 'warn');
     document.body.classList.remove('is-spinning');
-    this.isSpinning = false;
-    this.elements.spinBtn.disabled = false;
-    this.elements.spinBtn.textContent = 'Spin the Wheel';
+    abort();
   }
 
   reSpinExcludeCurrentWinner() {
@@ -1495,7 +1693,7 @@ class TwitchGiveawayApp {
     this.excludedWinners.add(this.currentWinner.toLowerCase());
     this.closeWinnerModal();
     this.renderWheel();
-    const eligible = Array.from(this.participants.keys()).filter(n => !this.tempExclusions.has(n));
+    const eligible = Array.from(this.participants.keys()).filter(n => !this.tempExclusions.has(n) && this.isWinnable(n));
     if (eligible.length === 0) { this.showToast('No eligible participants left to re-spin.', 'warn'); this.tempExclusions.clear(); return; }
     this.spinWheel();
   }
